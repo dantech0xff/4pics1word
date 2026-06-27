@@ -26,7 +26,7 @@ private func activeChars(_ state: PuzzleState) -> [Character] {
 
 // MARK: - Place / Remove
 
-@Suite(.serialized)
+@MainActor @Suite(.serialized)
 struct PuzzleStatePlaceRemoveTests {
     @Test
     func placeFillsFirstEmptyThenIsFull() {
@@ -75,7 +75,7 @@ struct PuzzleStatePlaceRemoveTests {
 
 // MARK: - Win detection
 
-@Suite(.serialized)
+@MainActor @Suite(.serialized)
 struct PuzzleStateWinTests {
     @Test
     func correctFillWinsAndFiresOnSolved() {

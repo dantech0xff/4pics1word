@@ -25,6 +25,7 @@ final class AppModel {
         self.store = store
         self.settings = settings
         self.progress = store.load()
+        Feedback.enabled = settings.hapticsEnabled
     }
 
     // MARK: Derived
@@ -88,8 +89,9 @@ final class AppModel {
         phase = .home
     }
 
-    func updateSound(_ enabled: Bool) {
-        settings.soundEnabled = enabled
+    func updateHaptics(_ enabled: Bool) {
+        settings.hapticsEnabled = enabled
+        Feedback.enabled = enabled
         settings.save()
     }
 

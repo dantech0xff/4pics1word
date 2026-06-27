@@ -25,6 +25,7 @@ struct GameView: View {
         .offset(x: shakeOffset)
         .onChange(of: state.wrongAttemptToken) { _, _ in
             triggerShake()
+            Feedback.wrong()
         }
     }
 

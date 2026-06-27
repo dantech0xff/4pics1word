@@ -1,7 +1,7 @@
 import Foundation
 
 struct Settings: Codable, Equatable {
-    var soundEnabled: Bool = true
+    var hapticsEnabled: Bool = true
 
     static let key = "settings.v1"
 

@@ -6,10 +6,10 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Sound") {
-                Toggle("Sound effects", isOn: Binding(
-                    get: { model.settings.soundEnabled },
-                    set: { model.updateSound($0) }
+            Section("Feedback") {
+                Toggle("Haptic feedback", isOn: Binding(
+                    get: { model.settings.hapticsEnabled },
+                    set: { model.updateHaptics($0) }
                 ))
             }
 

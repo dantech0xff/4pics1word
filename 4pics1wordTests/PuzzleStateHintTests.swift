@@ -26,7 +26,7 @@ private func activeChars(_ state: PuzzleState) -> [Character] {
 
 // MARK: - Reveal hint (spec §4.4)
 
-@Suite(.serialized)
+@MainActor @Suite(.serialized)
 struct PuzzleStateRevealTests {
     @Test
     func revealFillsFirstEmptySlotWithCorrectLetterAndLocks() {
@@ -99,7 +99,7 @@ struct PuzzleStateRevealTests {
 
 // MARK: - Remove hint (spec §4.5)
 
-@Suite(.serialized)
+@MainActor @Suite(.serialized)
 struct PuzzleStateRemoveHintTests {
     @Test
     func removeStripsSurplusLeavingExactlyNeededMultiset() {
@@ -154,7 +154,7 @@ struct PuzzleStateRemoveHintTests {
 
 // MARK: - Shuffle (spec §4.6)
 
-@Suite(.serialized)
+@MainActor @Suite(.serialized)
 struct PuzzleStateShuffleTests {
     @Test
     func shufflePreservesAllTileState() {
@@ -195,7 +195,7 @@ struct PuzzleStateShuffleTests {
 
 // MARK: - Invariant sweep across the real level set
 
-@Suite(.serialized)
+@MainActor @Suite(.serialized)
 struct PuzzleStateInvariantTests {
     @Test
     func everyLevelSolvableViaReveals() async throws {

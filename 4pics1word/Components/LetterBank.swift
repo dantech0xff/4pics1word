@@ -11,6 +11,7 @@ struct LetterBank: View {
             ForEach(state.bankTiles) { tile in
                 Button {
                     state.placeTile(tile.id)
+                    Feedback.tap()
                 } label: {
                     Text(String(tile.character))
                 }
