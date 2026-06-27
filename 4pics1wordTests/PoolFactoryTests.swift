@@ -2,6 +2,7 @@ import Testing
 import Foundation
 @testable import _pics1word
 
+@Suite(.serialized)
 struct PoolFactoryTests {
     @Test
     func poolSizeMatchesSpec() {
@@ -45,6 +46,7 @@ struct PoolFactoryTests {
     }
 }
 
+@Suite(.serialized)
 struct LevelServiceTests {
     @Test
     func loadsBundledLevels() throws {

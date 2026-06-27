@@ -34,15 +34,18 @@ final class PuzzleState {
     /// Fired once when the puzzle is solved. AppModel applies reward + persists + advances.
     var onSolved: (PuzzleState) -> Void = { _ in }
 
-    init(puzzle: Puzzle, coins: Int, onSolved: @escaping (PuzzleState) -> Void = { _ in }) {
+    init(puzzle: Puzzle, coins: Int, pool: [Character], onSolved: @escaping (PuzzleState) -> Void = { _ in }) {
         self.puzzle = puzzle
         self.solution = puzzle.solutionCharacters
         self.coins = coins
         self.onSolved = onSolved
-        let characters = PoolFactory.makePool(for: puzzle)
-        let built: [Tile] = characters.enumerated().map { Tile(id: $0.offset, character: $0.element) }
+        let built: [Tile] = pool.enumerated().map { Tile(id: $0.offset, character: $0.element) }
         self.tiles = built
         self.bankOrder = built.map(\.id)
+    }
+
+    convenience init(puzzle: Puzzle, coins: Int, onSolved: @escaping (PuzzleState) -> Void = { _ in }) {
+        self.init(puzzle: puzzle, coins: coins, pool: PoolFactory.makePool(for: puzzle), onSolved: onSolved)
     }
 
     // MARK: - Derived state
