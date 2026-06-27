@@ -1,0 +1,12 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+.build/
+
+# Local build sandbox used by agent
+.tmp/
+derived/
+
+# macOS
+.DS_Store
