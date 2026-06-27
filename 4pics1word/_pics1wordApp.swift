@@ -11,7 +11,7 @@ import SwiftUI
 struct _pics1wordApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppRootView()
         }
     }
 }

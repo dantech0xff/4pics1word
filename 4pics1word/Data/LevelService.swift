@@ -2,11 +2,13 @@ import Foundation
 
 final class LevelService {
     let levels: [Puzzle]
+    let strategy: Strategy
     private let puzzleById: [Int: Puzzle]
     private let imageIds: Set<Int>
 
     init(data: PuzzleData, strategy: Strategy, imageIds: Set<Int>) {
         self.puzzleById = Dictionary(data.puzzles.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        self.strategy = strategy
         self.imageIds = imageIds
         var ordered: [Puzzle] = []
         var seen = Set<Int>()

@@ -26,7 +26,6 @@ struct GameView: View {
         .onChange(of: state.wrongAttemptToken) { _, _ in
             triggerShake()
         }
-        .overlay { winOverlay }
     }
 
     // MARK: Header
@@ -108,29 +107,5 @@ struct GameView: View {
         withAnimation(.easeInOut(duration: 0.05).delay(0.05)) { shakeOffset = -amplitude }
         withAnimation(.easeInOut(duration: 0.05).delay(0.10)) { shakeOffset = amplitude }
         withAnimation(.easeInOut(duration: 0.05).delay(0.15)) { shakeOffset = 0 }
-    }
-
-    // MARK: Win overlay (Phase 4 inline; Phase 5 replaces with WinView sheet)
-
-    @ViewBuilder
-    private var winOverlay: some View {
-        if state.phase == .won {
-            ZStack {
-                Color.black.opacity(0.55).ignoresSafeArea()
-                VStack(spacing: 12) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(.green)
-                    Text("Solved!")
-                        .font(.title.weight(.bold))
-                    Text(state.puzzle.solution)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(30)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
-            }
-            .transition(.opacity)
-        }
     }
 }
