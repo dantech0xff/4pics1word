@@ -1,21 +1,28 @@
-//
-//  ContentView.swift
-//  4pics1word
-//
-//  Created by Dan on 28/6/26.
-//
-
 import SwiftUI
 
+// TEMPORARY Phase 4 smoke harness — Phase 5 replaces with AppRootView (Home → Game → Win).
 struct ContentView: View {
+    @State private var state: PuzzleState?
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if let state {
+                GameView(
+                    state: state,
+                    levelNumber: 1,
+                    totalLevels: 250
+                )
+            } else {
+                ProgressView().task { await load() }
+            }
         }
-        .padding()
+    }
+
+    @MainActor
+    private func load() async {
+        let service = LevelService.load()
+        guard let level = service.levels.first else { return }
+        state = PuzzleState(puzzle: level, coins: Progress.startingCoins)
     }
 }
 
