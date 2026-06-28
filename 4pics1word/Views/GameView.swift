@@ -10,6 +10,9 @@ struct GameView: View {
     var onExit: () -> Void = {}
 
     @State private var shakeOffset: CGFloat = 0
+    @State private var zoomedIndex: Int?
+    @Namespace private var zoomNS
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 16) {
@@ -26,6 +29,9 @@ struct GameView: View {
         .onChange(of: state.wrongAttemptToken) { _, _ in
             triggerShake()
             Feedback.wrong()
+        }
+        .onChange(of: state.puzzle.id) { _, _ in
+            zoomedIndex = nil
         }
     }
 
@@ -54,8 +60,15 @@ struct GameView: View {
 
     private var content: some View {
         VStack(spacing: 20) {
-            PictureGrid(puzzleId: state.puzzle.id)
-                .padding(.horizontal)
+            PictureGrid(
+                puzzleId: state.puzzle.id,
+                copyrights: state.puzzle.copyrights,
+                zoomedIndex: zoomedIndex,
+                namespace: zoomNS,
+                onTap: zoom,
+                onDismiss: dismissZoom
+            )
+            .padding(.horizontal)
             AnswerSlots(state: state)
                 .padding(.horizontal)
         }
@@ -108,5 +121,19 @@ struct GameView: View {
         withAnimation(.easeInOut(duration: 0.05).delay(0.05)) { shakeOffset = -amplitude }
         withAnimation(.easeInOut(duration: 0.05).delay(0.10)) { shakeOffset = amplitude }
         withAnimation(.easeInOut(duration: 0.05).delay(0.15)) { shakeOffset = 0 }
+    }
+
+    // MARK: Image zoom
+
+    private func zoom(_ index: Int) { setZoom(index) }
+
+    private func dismissZoom() { setZoom(nil) }
+
+    private func setZoom(_ index: Int?) {
+        if reduceMotion {
+            zoomedIndex = index
+        } else {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { zoomedIndex = index }
+        }
     }
 }
