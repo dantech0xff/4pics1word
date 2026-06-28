@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     let model: AppModel
+    @Binding var showCheckin: Bool
 
     var body: some View {
         VStack(spacing: 24) {
@@ -22,6 +23,14 @@ struct HomeView: View {
         HStack {
             CoinCounter(coins: model.progress.coins)
             Spacer()
+            Button { showCheckin = true } label: {
+                Image(systemName: "calendar.badge.checkmark")
+                    .font(.title2)
+                    .padding(8)
+                    .symbolEffect(.bounce, options: .repeat(1), isActive: model.canCheckInToday)
+                    .foregroundStyle(model.canCheckInToday ? Color.accentColor : Color.primary)
+            }
+            .accessibilityLabel(model.canCheckInToday ? "Daily check-in, reward available" : "Daily check-in")
             NavigationLink(value: Route.settings) {
                 Image(systemName: "gearshape")
                     .font(.title2)

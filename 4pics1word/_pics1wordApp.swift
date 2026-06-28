@@ -9,6 +9,14 @@ import SwiftUI
 
 @main
 struct _pics1wordApp: App {
+    init() {
+        if CommandLine.arguments.contains("-uitest-reset") {
+            let d = UserDefaults.standard
+            d.removeObject(forKey: "progress.v1")
+            d.removeObject(forKey: Settings.key)
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             AppRootView()

@@ -9,6 +9,7 @@ enum Route: Hashable {
 struct AppRootView: View {
     @State private var model = AppModel()
     @State private var showSplash = true
+    @State private var showCheckinSheet = false
 
     var body: some View {
         Group {
@@ -19,18 +20,27 @@ struct AppRootView: View {
                     .fullScreenCover(isPresented: showGame) {
                         gameLayer
                     }
+                    .sheet(isPresented: $showCheckinSheet) {
+                        CheckInView(model: model) { showCheckinSheet = false }
+                            .presentationDetents([.medium, .large])
+                    }
             }
         }
         .preferredColorScheme(model.settings.appearance == .dark ? .dark : .light)
         .task {
             try? await Task.sleep(for: .seconds(1.5))
             withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
+            if model.canCheckInToday && !model.hasSeenCheckinSheetToday {
+                try? await Task.sleep(for: .seconds(0.4))
+                showCheckinSheet = true
+                model.markCheckinSheetSeen()
+            }
         }
     }
 
     private var navigationStack: some View {
         NavigationStack {
-            HomeView(model: model)
+            HomeView(model: model, showCheckin: $showCheckinSheet)
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .settings: SettingsView(model: model)
