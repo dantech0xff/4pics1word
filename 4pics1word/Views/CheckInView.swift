@@ -36,6 +36,20 @@ struct CheckInView: View {
         return ((next - 1) % 7 + 7) % 7
     }
 
+    /// Dismissal gate: the sheet may only close once today's reward has been claimed
+    /// (or if there is nothing to claim). Derived from existing observable state (DRY).
+    private var canDismiss: Bool { !model.canCheckInToday }
+
+    /// Close-button handler. Fires a warning haptic and aborts when the gate is closed;
+    /// otherwise forwards to the host via `onDismiss`.
+    private func attemptClose() {
+        guard canDismiss else {
+            Feedback.warning()
+            return
+        }
+        onDismiss()
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             header
@@ -43,7 +57,7 @@ struct CheckInView: View {
             Spacer(minLength: 8)
             actionSection
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -68,30 +82,43 @@ struct CheckInView: View {
                 }
             }
             Spacer()
-            Button(action: onDismiss) {
+            Button(action: attemptClose) {
                 Image(systemName: "xmark")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(8)
             }
+            .disabled(!canDismiss)
+            .opacity(canDismiss ? 1 : 0.4)
             .accessibilityLabel("Close")
+            .accessibilityHint(canDismiss
+                ? "Closes the reward sheet."
+                : "Disabled until you claim today's reward. Double-tap the Claim button to continue.")
         }
         .padding(.top, 4)
     }
 
     private var dayStrip: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<7, id: \.self) { i in
-                DayTile(
-                    day: i + 1,
-                    reward: CheckIn.rewards[i],
-                    state: tileState(for: i),
-                    isJackpot: i == 6,
-                    pulse: pulse
-                )
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                ForEach(0..<3, id: \.self) { i in dayTile(for: i, rowSize: .three) }
+            }
+            HStack(spacing: 8) {
+                ForEach(3..<7, id: \.self) { i in dayTile(for: i, rowSize: .four) }
             }
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private func dayTile(for i: Int, rowSize: DayTileRowSize) -> some View {
+        DayTile(
+            day: i + 1,
+            reward: CheckIn.rewards[i],
+            state: tileState(for: i),
+            isJackpot: i == 6,
+            pulse: pulse,
+            rowSize: rowSize
+        )
     }
 
     private func tileState(for index: Int) -> DayTileState {
@@ -170,42 +197,178 @@ struct CheckInView: View {
 
 private enum DayTileState { case claimed, today, locked }
 
+/// Drives per-row sizing: row 1 holds 3 tiles (larger), row 2 holds 4 (smaller).
+private enum DayTileRowSize { case three, four }
+
 private struct DayTile: View {
     let day: Int
     let reward: Int
     let state: DayTileState
     let isJackpot: Bool
     let pulse: Bool
+    let rowSize: DayTileRowSize
 
-    @ScaledMetric private var height: CGFloat = 44
+    @ScaledMetric private var threeHeight: CGFloat = 112
+    @ScaledMetric private var fourHeight: CGFloat = 88
+    @ScaledMetric private var corner: CGFloat = 18
+
+    private var height: CGFloat { rowSize == .three ? threeHeight : fourHeight }
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("Day \(day)")
-                .font(.caption2.weight(.medium))
-            Image(systemName: icon)
-                .font(.body)
-            Text("\(reward)")
-                .font(.caption.weight(.semibold)).monospacedDigit()
+        ZStack {
+            contentColumn
+                .frame(height: height)
+                .frame(maxWidth: .infinity)
+                .background(tileBackground)
+                .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+                .overlay(stateOverlay)
+                .overlay(jackpotBadge)
+                .overlay(todayPill)
+                .opacity(stateOpacity)
+                .scaleEffect(scale)
+                .shadow(color: state == .today ? Color.accentColor.opacity(0.55) : .clear,
+                        radius: state == .today ? 10 : 0)
         }
-        .frame(height: height)
-        .frame(maxWidth: .infinity)
-        .background(background)
-        .overlay(border)
-        .opacity(opacity)
-        .scaleEffect(state == .today && pulse ? 1.05 : 1)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Day \(day) of 7")
         .accessibilityValue(valueLabel)
-        .accessibilityHint("Reward: \(reward) coins")
+        .accessibilityHint(a11yHint)
     }
 
-    private var icon: String {
+    // MARK: - Content
+
+    @ViewBuilder
+    private var contentColumn: some View {
+        VStack(spacing: 4) {
+            Text("DAY \(day)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            Image(systemName: "bitcoinsign.circle.fill")
+                .font(.title3)
+                .foregroundStyle(.yellow)
+            Text("\(reward)")
+                .font(valueFont.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(isJackpot ? Color.orange : Color.primary)
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private var valueFont: Font {
         switch state {
-        case .claimed: return "checkmark.circle.fill"
-        case .today: return "gift.fill"
-        case .locked: return "lock.fill"
+        case .today where isJackpot: return .title2
+        case .today: return .title3
+        case .claimed: return .callout
+        default: return .body
         }
     }
+
+    // MARK: - Background
+
+    @ViewBuilder
+    private var tileBackground: some View {
+        if isJackpot && state != .claimed {
+            LinearGradient(
+                colors: [Color.yellow.opacity(0.85), Color.orange.opacity(0.85)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        } else {
+            switch state {
+            case .claimed:
+                Color.accentColor.opacity(isJackpot ? 0.25 : 0.15)
+            case .today:
+                Color.accentColor.opacity(0.2)
+            case .locked:
+                Color.secondary.opacity(0.1)
+            }
+        }
+    }
+
+    // MARK: - State overlays
+
+    @ViewBuilder
+    private var stateOverlay: some View {
+        ZStack {
+            switch state {
+            case .today:
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .strokeBorder(Color.accentColor, lineWidth: 2)
+            case .locked:
+                // 30% dark scrim keeps the reward readable but visually de-emphasised.
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .fill(Color.black.opacity(0.3))
+            case .claimed:
+                // Green check overlay sits above the content column (coin icon still visible).
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(.green)
+            }
+
+            // Locked-only padlock chip, top-trailing (no conflict w/ TODAY pill — locked != today).
+            if state == .locked {
+                Image(systemName: "lock.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(4)
+                    .background(Circle().fill(Color.black.opacity(0.5)))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(6)
+            }
+        }
+    }
+
+    // MARK: - Badges
+
+    @ViewBuilder
+    private var jackpotBadge: some View {
+        // Pill promises more than a claimed tile shows, so hide once claimed (mirrors
+        // `tileBackground` dropping the golden gradient on the same transition).
+        if isJackpot && state != .claimed {
+            Text("JACKPOT")
+                .font(.system(size: 9, weight: .heavy))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.orange))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(6)
+        }
+    }
+
+    @ViewBuilder
+    private var todayPill: some View {
+        if state == .today {
+            Text("TODAY")
+                .font(.system(size: 9, weight: .heavy))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.accentColor))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(6)
+        }
+    }
+
+    // MARK: - State-driven presentation
+
+    private var scale: CGFloat {
+        if state == .claimed { return 0.95 }
+        if state == .today && pulse { return 1.05 }
+        return 1
+    }
+
+    private var stateOpacity: Double {
+        switch state {
+        case .locked: return 1.0    // 30% black scrim in `stateOverlay` does the dimming
+        case .claimed: return 0.7
+        default: return 1
+        }
+    }
+
+    // MARK: - Accessibility strings
 
     private var valueLabel: String {
         switch state {
@@ -215,35 +378,10 @@ private struct DayTile: View {
         }
     }
 
-    @ViewBuilder
-    private var background: some View {
-        switch state {
-        case .claimed:
-            Capsule().fill(isJackpot ? AnyShapeStyle(Color.accentColor.opacity(0.25)) : AnyShapeStyle(Color.accentColor.opacity(0.15)))
-        case .today:
-            Capsule().fill(Color.accentColor.opacity(0.2))
-        case .locked:
-            Capsule().fill(Color.secondary.opacity(0.1))
-        }
-    }
-
-    @ViewBuilder
-    private var border: some View {
-        switch state {
-        case .today:
-            Capsule().strokeBorder(Color.accentColor, lineWidth: 2)
-        case .claimed where isJackpot:
-            Capsule().strokeBorder(Color.accentColor, lineWidth: 1.5)
-        default:
-            EmptyView()
-        }
-    }
-
-    private var opacity: Double {
-        switch state {
-        case .locked: return 0.4
-        default: return 1
-        }
+    private var a11yHint: String {
+        var parts = "Reward: \(reward) coins"
+        if isJackpot { parts += ". Jackpot day" }
+        return parts
     }
 }
 

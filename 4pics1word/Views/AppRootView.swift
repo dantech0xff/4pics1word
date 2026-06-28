@@ -23,6 +23,8 @@ struct AppRootView: View {
                     .sheet(isPresented: $showCheckinSheet) {
                         CheckInView(model: model) { showCheckinSheet = false }
                             .presentationDetents([.medium, .large])
+                            .presentationDragIndicator(.visible)
+                            .interactiveDismissDisabled(!model.canCheckInToday)
                     }
             }
         }

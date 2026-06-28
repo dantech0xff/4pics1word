@@ -21,6 +21,13 @@ enum Feedback {
         UINotificationFeedbackGenerator().notificationOccurred(.error)
     }
 
+    /// Soft warning for non-fatal blocked actions (e.g. tapping Close while the
+    /// daily-reward sheet is gated). Uses the cached generator for warmth.
+    static func warning() {
+        guard enabled else { return }
+        notifyGen.notificationOccurred(.warning)
+    }
+
     static func win() {
         guard enabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
