@@ -31,6 +31,10 @@ final class PuzzleState {
     /// Increments on each full-but-wrong clear. UI observes to trigger shake animation.
     private(set) var wrongAttemptToken: Int = 0
 
+    /// Increments exactly once on solve, BEFORE `onSolved` fires. UI observes to trigger
+    /// the celebration wave (mirrors `wrongAttemptToken`).
+    private(set) var solvedToken: Int = 0
+
     /// Fired once when the puzzle is solved. AppModel applies reward + persists + advances.
     var onSolved: (PuzzleState) -> Void = { _ in }
 
@@ -167,6 +171,7 @@ final class PuzzleState {
     private func evaluate() {
         if isSolved {
             phase = .won
+            solvedToken &+= 1
             onSolved(self)
         } else {
             for index in tiles.indices {

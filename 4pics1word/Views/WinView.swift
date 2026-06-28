@@ -15,7 +15,6 @@ struct WinView: View {
         .padding(28)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
-        .onAppear { Feedback.win() }
     }
 
     private var header: some View {

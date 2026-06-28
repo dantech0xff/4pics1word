@@ -57,7 +57,7 @@ struct AppRootView: View {
 
     private var showGame: Binding<Bool> {
         Binding(
-            get: { model.phase == .playing || model.phase == .won },
+            get: { model.phase == .playing || model.phase == .celebrating || model.phase == .won },
             set: { if !$0 { model.exitToHome() } }
         )
     }

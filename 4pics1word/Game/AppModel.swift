@@ -4,6 +4,7 @@ import Observation
 enum AppPhase: Equatable {
     case home
     case playing
+    case celebrating
     case won
 }
 
@@ -17,6 +18,10 @@ final class AppModel {
     var phase: AppPhase = .home
     var gameState: PuzzleState?
     var lastReward: Int = 0
+    /// Safety-net Task that flips `.celebrating` → `.won` if GameView's wave-driver
+    /// never calls `completeSolve()` (e.g. view dismissed mid-wave). Normal path is
+    /// the explicit `completeSolve()` from GameView at wave-end.
+    private var celebrationTask: Task<Void, Never>?
 
     init(service: LevelService = .load(),
          store: ProgressStore = .init(),
@@ -51,6 +56,9 @@ final class AppModel {
     }
 
     /// Called from PuzzleState.onSolved (spec §4.3 — AppModel applies reward + persists + advances).
+    /// Reward/persist/index-advance happen synchronously here (never deferred ⇒ no progress loss).
+    /// Phase flips to `.celebrating` (NOT `.won`); GameView's wave-driver calls `completeSolve()`
+    /// at animation end to present the WinView sheet. Safety-net Task guards against missed calls.
     private func handleSolved(_ state: PuzzleState) {
         let tier = service.strategy.tier(for: progress.currentLevelIndex)
         let reward = Economy.reward(forTier: tier)
@@ -61,15 +69,33 @@ final class AppModel {
         progress.currentLevelIndex = (progress.currentLevelIndex + 1) % totalLevels
         lastReward = reward
         store.save(progress)
+        phase = .celebrating
+        celebrationTask?.cancel()
+        celebrationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2.0))
+            guard !Task.isCancelled, let self else { return }
+            guard self.phase == .celebrating else { return }
+            self.completeSolve()
+        }
+    }
+
+    /// Flip `.celebrating` → `.won` (presents WinView sheet). Idempotent: no-op when already
+    /// `.won`/`.home`/`.playing`. Cancels the safety-net Task — explicit completion wins.
+    func completeSolve() {
+        celebrationTask?.cancel()
+        celebrationTask = nil
+        guard phase == .celebrating else { return }
         phase = .won
     }
 
     func nextLevel() {
+        celebrationTask?.cancel(); celebrationTask = nil
         guard hasNextLevel else { phase = .home; return }
         startLevel(at: progress.currentLevelIndex)
     }
 
     func exitToHome() {
+        celebrationTask?.cancel(); celebrationTask = nil
         // Commit coins spent on hints mid-level (prevents refund-on-exit exploit)
         if let state = gameState {
             progress.coins = state.coins
@@ -80,6 +106,7 @@ final class AppModel {
     }
 
     func resetProgress() {
+        celebrationTask?.cancel(); celebrationTask = nil
         store.reset()
         progress = Progress()
         gameState = nil
