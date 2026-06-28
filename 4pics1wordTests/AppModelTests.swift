@@ -33,11 +33,16 @@ struct AppModelProgressLoopTests {
         // Drive the real win path — onSolved fires handleSolved synchronously.
         for c in state.puzzle.solution { placeChar(state, c) }
 
+        // Phase 01: solve sets `.celebrating` (deferred), not `.won`. Engine truth is `.won`.
         #expect(state.phase == .won)
-        #expect(model.phase == .won)
+        #expect(model.phase == .celebrating)
+        // Reward/persist/index-advance happened synchronously at solve moment (no progress loss).
         #expect(model.progress.currentLevelIndex == 0, "Index must wrap to 0 after the final level")
         #expect(model.hasNextLevel, "Loop must always offer a next level")
         #expect(model.currentLevelNumber == 1)
+        // Wave-end flips `.celebrating` → `.won` → presents WinView sheet.
+        model.completeSolve()
+        #expect(model.phase == .won)
     }
 
     @Test
@@ -53,8 +58,12 @@ struct AppModelProgressLoopTests {
         }
         for c in state.puzzle.solution { placeChar(state, c) }
 
+        // Phase 01: reward/advance happen synchronously; phase defers to `.celebrating`.
         #expect(model.progress.currentLevelIndex == 2, "Non-final solve advances by exactly one")
         #expect(model.currentLevelNumber == 3)
+        #expect(model.phase == .celebrating)
+        model.completeSolve()
+        #expect(model.phase == .won)
     }
 }
 

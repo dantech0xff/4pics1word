@@ -83,8 +83,10 @@ struct PuzzleStateWinTests {
         var solvedPuzzleId: Int?
         state.onSolved = { solvedPuzzleId = $0.puzzle.id }
         #expect(state.phase == .playing)
+        #expect(state.solvedToken == 0)
         for c in "MOUSE" { placeChar(state, c) }
         #expect(state.phase == .won)
+        #expect(state.solvedToken == 1, "solvedToken must increment exactly once on solve")
         #expect(solvedPuzzleId == state.puzzle.id)
     }
 
