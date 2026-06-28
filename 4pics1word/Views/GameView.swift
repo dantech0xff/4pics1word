@@ -7,9 +7,12 @@ struct GameView: View {
     let state: PuzzleState
     let levelNumber: Int
     var onExit: () -> Void = {}
+    /// Fired at celebration-wave end → `AppModel.completeSolve()` → `.won` → WinView sheet.
+    var onSolved: () -> Void = {}
 
     @State private var shakeOffset: CGFloat = 0
     @State private var zoomedIndex: Int?
+    @State private var waveTask: Task<Void, Never>?
     @Namespace private var zoomNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -29,8 +32,38 @@ struct GameView: View {
             triggerShake()
             Feedback.wrong()
         }
+        .onChange(of: state.solvedToken) { _, new in
+            // AnswerSlots self-observes `solvedToken` for the visual wave; GameView owns
+            // the haptic loop + sheet-timing (single source of truth for completion).
+            guard new > 0 else { return }
+            waveTask?.cancel()
+            if reduceMotion {
+                // Skip the celebration entirely; straight to sheet.
+                onSolved()
+                return
+            }
+            let n = state.slotCount
+            waveTask = Task { @MainActor in
+                Feedback.prepareCelebration()
+                for _ in 0..<n {
+                    guard !Task.isCancelled else { return }
+                    Feedback.celebrationTap(intensity: 0.7)
+                    try? await Task.sleep(for: .milliseconds(80))
+                }
+                guard !Task.isCancelled else { return }
+                Feedback.celebrationChime()
+                // Tail aligns with the last tile's visual settle (~0.40s post-stagger end).
+                try? await Task.sleep(for: .milliseconds(320))
+                guard !Task.isCancelled else { return }
+                onSolved()
+            }
+        }
         .onChange(of: state.puzzle.id) { _, _ in
             zoomedIndex = nil
+            waveTask?.cancel()
+        }
+        .onDisappear {
+            waveTask?.cancel()
         }
     }
 

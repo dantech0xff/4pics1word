@@ -46,7 +46,8 @@ struct AppRootView: View {
             GameView(
                 state: state,
                 levelNumber: model.currentLevelNumber,
-                onExit: { model.exitToHome() }
+                onExit: { model.exitToHome() },
+                onSolved: { model.completeSolve() }
             )
             .sheet(isPresented: showWin) {
                 WinView(model: model)
