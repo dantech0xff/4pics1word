@@ -8,6 +8,7 @@ enum AppearancePreference: String, Codable, CaseIterable {
 struct Settings: Codable, Equatable {
     var hapticsEnabled: Bool = true
     var appearance: AppearancePreference = .light
+    var lastCheckinSheetDay: String?
 
     static let key = "settings.v1"
 

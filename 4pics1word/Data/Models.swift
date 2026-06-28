@@ -36,6 +36,28 @@ struct Progress: Codable, Equatable {
     var currentLevelIndex: Int = 0
     var coins: Int = Progress.startingCoins
     var solvedIds: Set<Int> = []
+    var lastCheckInDate: Date?
+    var streakDays: Int = 0
+    var lifetimeCheckIns: Int = 0
+    var lastKnownNow: Date?
 
     static let startingCoins = 100
+
+    private enum CodingKeys: String, CodingKey {
+        case currentLevelIndex, coins, solvedIds
+        case lastCheckInDate, streakDays, lifetimeCheckIns, lastKnownNow
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        currentLevelIndex = try c.decodeIfPresent(Int.self, forKey: .currentLevelIndex) ?? 0
+        coins = try c.decodeIfPresent(Int.self, forKey: .coins) ?? Progress.startingCoins
+        solvedIds = try c.decodeIfPresent(Set<Int>.self, forKey: .solvedIds) ?? []
+        lastCheckInDate = try c.decodeIfPresent(Date.self, forKey: .lastCheckInDate)
+        streakDays = try c.decodeIfPresent(Int.self, forKey: .streakDays) ?? 0
+        lifetimeCheckIns = try c.decodeIfPresent(Int.self, forKey: .lifetimeCheckIns) ?? 0
+        lastKnownNow = try c.decodeIfPresent(Date.self, forKey: .lastKnownNow)
+    }
 }

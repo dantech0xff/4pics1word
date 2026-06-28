@@ -13,11 +13,13 @@ enum AppPhase: Equatable {
 final class AppModel {
     let service: LevelService
     let store: ProgressStore
+    private let settingsDefaults: UserDefaults
     var progress: Progress
     var settings: Settings
     var phase: AppPhase = .home
     var gameState: PuzzleState?
     var lastReward: Int = 0
+    var lastCheckInReward: Int = 0
     /// Safety-net Task that flips `.celebrating` → `.won` if GameView's wave-driver
     /// never calls `completeSolve()` (e.g. view dismissed mid-wave). Normal path is
     /// the explicit `completeSolve()` from GameView at wave-end.
@@ -25,12 +27,14 @@ final class AppModel {
 
     init(service: LevelService = .load(),
          store: ProgressStore = .init(),
-         settings: Settings = .load()) {
+         settings: Settings? = nil,
+         settingsDefaults: UserDefaults = .standard) {
         self.service = service
         self.store = store
-        self.settings = settings
+        self.settingsDefaults = settingsDefaults
+        self.settings = settings ?? Settings.load(defaults: settingsDefaults)
         self.progress = store.load()
-        Feedback.enabled = settings.hapticsEnabled
+        Feedback.enabled = self.settings.hapticsEnabled
     }
 
     // MARK: Derived
@@ -38,6 +42,21 @@ final class AppModel {
     var totalLevels: Int { service.count }
     var currentLevelNumber: Int { progress.currentLevelIndex + 1 }
     var hasNextLevel: Bool { progress.currentLevelIndex < totalLevels }
+    var canCheckInToday: Bool { CheckIn.canClaim(progress) }
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f
+    }()
+
+    private var todayKey: String { Self.dayFormatter.string(from: Date()) }
+    var hasSeenCheckinSheetToday: Bool { settings.lastCheckinSheetDay == todayKey }
+    func markCheckinSheetSeen() {
+        settings.lastCheckinSheetDay = todayKey
+        settings.save(defaults: settingsDefaults)
+    }
 
     // MARK: Flow
 
@@ -79,6 +98,24 @@ final class AppModel {
         }
     }
 
+    /// Once-per-calendar-day coin claim. Returns reward amount, or nil if already claimed today
+    /// or clock-rewind is suspected. Mirrors the `handleSolved` reward path (Decision Point B:
+    /// check-in is additive to solve-rewards). Advances the `lastKnownNow` high-water mark only
+    /// on a legitimate claim — never on a rewind-suspected attempt (prevents ratchet-down).
+    func checkIn() -> Int? {
+        guard CheckIn.canClaim(progress) else { return nil }
+        let day = CheckIn.nextStreakDay(progress)
+        let reward = CheckIn.reward(forStreakDay: day)
+        progress.streakDays = day
+        progress.coins += reward
+        progress.lastCheckInDate = Date()
+        progress.lifetimeCheckIns += 1
+        progress.lastKnownNow = Date()
+        lastCheckInReward = reward
+        store.save(progress)
+        return reward
+    }
+
     /// Flip `.celebrating` → `.won` (presents WinView sheet). Idempotent: no-op when already
     /// `.won`/`.home`/`.playing`. Cancels the safety-net Task — explicit completion wins.
     func completeSolve() {
@@ -116,12 +153,12 @@ final class AppModel {
     func updateHaptics(_ enabled: Bool) {
         settings.hapticsEnabled = enabled
         Feedback.enabled = enabled
-        settings.save()
+        settings.save(defaults: settingsDefaults)
     }
 
     func updateAppearance(_ preference: AppearancePreference) {
         settings.appearance = preference
-        settings.save()
+        settings.save(defaults: settingsDefaults)
     }
 
     /// Unique photo attributions across all bundled levels (legal: credit all included art).

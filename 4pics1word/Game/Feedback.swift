@@ -46,4 +46,12 @@ enum Feedback {
         guard enabled else { return }
         notifyGen.notificationOccurred(.success)
     }
+
+    /// Daily check-in reward burst. Warms the cached generators first so the success
+    /// notification fires on the pre-warmed hardware instance.
+    static func reward() {
+        guard enabled else { return }
+        prepareCelebration()
+        notifyGen.notificationOccurred(.success)
+    }
 }
