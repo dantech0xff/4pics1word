@@ -6,7 +6,6 @@ import SwiftUI
 struct GameView: View {
     let state: PuzzleState
     let levelNumber: Int
-    let totalLevels: Int
     var onExit: () -> Void = {}
 
     @State private var shakeOffset: CGFloat = 0
@@ -47,7 +46,7 @@ struct GameView: View {
                     .padding(8)
             }
             Spacer()
-            Text("Level \(levelNumber) of \(totalLevels)")
+            Text("Level \(levelNumber)")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
             Spacer()

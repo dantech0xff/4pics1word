@@ -50,25 +50,18 @@ struct WinView: View {
         .font(.headline)
     }
 
-    @ViewBuilder
     private var actions: some View {
         VStack(spacing: 12) {
-            if model.hasNextLevel {
-                Button {
-                    model.nextLevel()
-                } label: {
-                    Text("Next Level")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            } else {
-                Text("🏆 You solved every level!")
+            Button {
+                model.nextLevel()
+            } label: {
+                Text("Next Level")
                     .font(.headline)
-                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             Button("Home") {
                 model.exitToHome()
             }

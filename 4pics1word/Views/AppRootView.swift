@@ -45,7 +45,6 @@ struct AppRootView: View {
             GameView(
                 state: state,
                 levelNumber: model.currentLevelNumber,
-                totalLevels: model.totalLevels,
                 onExit: { model.exitToHome() }
             )
             .sheet(isPresented: showWin) {

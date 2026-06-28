@@ -47,33 +47,20 @@ struct HomeView: View {
 
     @ViewBuilder
     private var playButton: some View {
-        if model.isComplete {
-            VStack(spacing: 12) {
-                Text("🏆 All \(model.totalLevels) levels solved!")
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                Button("Play again from Level 1") {
-                    model.startLevel(at: 0)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            }
-        } else {
-            Button {
-                model.continueGame()
-            } label: {
-                Text(model.progress.currentLevelIndex == 0 ? "Play" : "Continue")
-                    .font(.title3.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+        Button {
+            model.continueGame()
+        } label: {
+            Text(model.progress.currentLevelIndex == 0 ? "Play" : "Continue")
+                .font(.title3.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
         }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
     }
 
     private var progressLabel: some View {
-        Text("Level \(model.currentLevelNumber) of \(model.totalLevels)")
+        Text("Level \(model.currentLevelNumber)")
             .font(.footnote)
             .foregroundStyle(.secondary)
     }

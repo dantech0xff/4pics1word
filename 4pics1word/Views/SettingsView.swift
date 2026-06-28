@@ -28,7 +28,6 @@ struct SettingsView: View {
                     Label("Photo credits", systemImage: "photo.stack")
                 }
                 LabeledContent("Version", value: "1.0")
-                LabeledContent("Levels", value: "\(model.totalLevels)")
             }
         }
         .navigationTitle("Settings")
