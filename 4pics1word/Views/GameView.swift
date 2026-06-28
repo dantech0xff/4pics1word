@@ -10,9 +10,9 @@ struct GameView: View {
     /// Fired at celebration-wave end → `AppModel.completeSolve()` → `.won` → WinView sheet.
     var onSolved: () -> Void = {}
 
-    @State private var shakeOffset: CGFloat = 0
     @State private var zoomedIndex: Int?
     @State private var waveTask: Task<Void, Never>?
+    @State private var wrongTask: Task<Void, Never>?
     @Namespace private var zoomNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -27,10 +27,24 @@ struct GameView: View {
         }
         .padding(.vertical, 12)
         .background(Color(.systemBackground).ignoresSafeArea())
-        .offset(x: shakeOffset)
-        .onChange(of: state.wrongAttemptToken) { _, _ in
-            triggerShake()
+        .onChange(of: state.wrongAttemptToken) { _, new in
+            // Wrong submit: AnswerSlots self-observes `wrongAttemptToken` for the red
+            // glow + shake; GameView owns the haptic + the deferred clear (single source
+            // of truth for the post-animation tile reset).
+            guard new > 0 else { return }
+            wrongTask?.cancel()
             Feedback.wrong()
+            if reduceMotion {
+                // Skip FX AND the delay; clear is functional, only glow+shake is decorative.
+                state.clearWrongAttempt()
+                return
+            }
+            wrongTask = Task { @MainActor in
+                // ≥ WrongFX animation tail (0.36s); pads to let the last shake settle.
+                try? await Task.sleep(for: .milliseconds(550))
+                guard !Task.isCancelled else { return }
+                state.clearWrongAttempt()
+            }
         }
         .onChange(of: state.solvedToken) { _, new in
             // AnswerSlots self-observes `solvedToken` for the visual wave; GameView owns
@@ -61,9 +75,11 @@ struct GameView: View {
         .onChange(of: state.puzzle.id) { _, _ in
             zoomedIndex = nil
             waveTask?.cancel()
+            wrongTask?.cancel()
         }
         .onDisappear {
             waveTask?.cancel()
+            wrongTask?.cancel()
         }
     }
 
@@ -143,16 +159,6 @@ struct GameView: View {
             .foregroundStyle(enabled ? Color.accentColor : .secondary)
         }
         .disabled(!enabled)
-    }
-
-    // MARK: Shake on wrong
-
-    private func triggerShake() {
-        let amplitude: CGFloat = 10
-        withAnimation(.easeInOut(duration: 0.05)) { shakeOffset = amplitude }
-        withAnimation(.easeInOut(duration: 0.05).delay(0.05)) { shakeOffset = -amplitude }
-        withAnimation(.easeInOut(duration: 0.05).delay(0.10)) { shakeOffset = amplitude }
-        withAnimation(.easeInOut(duration: 0.05).delay(0.15)) { shakeOffset = 0 }
     }
 
     // MARK: Image zoom

@@ -7,6 +7,7 @@ struct AnswerSlots: View {
     let state: PuzzleState
 
     @State private var celebrate: Bool = false
+    @State private var reject: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -22,6 +23,9 @@ struct AnswerSlots: View {
         .animation(.snappy, value: state.slotTile.map { $0?.id })
         .onChange(of: state.solvedToken) { _, _ in
             celebrate.toggle()
+        }
+        .onChange(of: state.wrongAttemptToken) { _, _ in
+            reject.toggle()
         }
     }
 
@@ -88,6 +92,31 @@ struct AnswerSlots: View {
                         CubicKeyframe(0.0, duration: 0.22)
                     }
                 }
+                // Wrong-answer rejection: red glow + horizontal shake, simultaneous on all
+                // tiles (no stagger — error urgency). Composes with the celebration animator;
+                // both read neutral unless their trigger fires.
+                .keyframeAnimator(initialValue: WrongFX(), trigger: reject) { content, fx in
+                    content
+                        .offset(x: fx.shakeX)
+                        .shadow(color: Color.red.opacity(0.85 * fx.glow),
+                                radius: 14 * fx.glow, y: 2)
+                } keyframes: { _ in
+                    KeyframeTrack(\.glow) {
+                        CubicKeyframe(0.0, duration: 0.00)
+                        CubicKeyframe(1.0, duration: 0.08)
+                        CubicKeyframe(1.0, duration: 0.10)
+                        CubicKeyframe(0.0, duration: 0.12)
+                    }
+                    KeyframeTrack(\.shakeX) {
+                        CubicKeyframe(0.0, duration: 0.00)
+                        CubicKeyframe(-10, duration: 0.05)
+                        CubicKeyframe(8, duration: 0.06)
+                        CubicKeyframe(-5, duration: 0.07)
+                        CubicKeyframe(3, duration: 0.07)
+                        CubicKeyframe(-1.5, duration: 0.06)
+                        CubicKeyframe(0, duration: 0.05)
+                    }
+                }
         }
     }
 }
@@ -124,4 +153,34 @@ private struct TileFX: VectorArithmetic {
 
     static func +=(lhs: inout TileFX, rhs: TileFX) { lhs = lhs + rhs }
     static func -=(lhs: inout TileFX, rhs: TileFX) { lhs = lhs - rhs }
+}
+
+/// Per-tile wrong-answer rejection keyframe values (red glow + horizontal shake).
+/// Mirrors `TileFX`: `VectorArithmetic` requirements are trivial on two scalars.
+/// Both tracks end at neutral (0.0) so rapid re-triggers have no visible discontinuity.
+private struct WrongFX: VectorArithmetic {
+    var glow: CGFloat = 0.0
+    var shakeX: CGFloat = 0.0
+
+    var magnitudeSquared: Double {
+        Double(glow) * Double(glow) + Double(shakeX) * Double(shakeX)
+    }
+
+    mutating func scale(by factor: Double) {
+        glow *= factor
+        shakeX *= factor
+    }
+
+    static var zero: WrongFX { WrongFX() }
+
+    static func +(lhs: WrongFX, rhs: WrongFX) -> WrongFX {
+        WrongFX(glow: lhs.glow + rhs.glow, shakeX: lhs.shakeX + rhs.shakeX)
+    }
+
+    static func -(lhs: WrongFX, rhs: WrongFX) -> WrongFX {
+        WrongFX(glow: lhs.glow - rhs.glow, shakeX: lhs.shakeX - rhs.shakeX)
+    }
+
+    static func +=(lhs: inout WrongFX, rhs: WrongFX) { lhs = lhs + rhs }
+    static func -=(lhs: inout WrongFX, rhs: WrongFX) { lhs = lhs - rhs }
 }
