@@ -6,6 +6,18 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Appearance") {
+                Picker("Theme", selection: Binding(
+                    get: { model.settings.appearance },
+                    set: { model.updateAppearance($0) }
+                )) {
+                    ForEach(AppearancePreference.allCases, id: \.self) { pref in
+                        Text(pref == .light ? "Light" : "Dark").tag(pref)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
             Section("Feedback") {
                 Toggle("Haptic feedback", isOn: Binding(
                     get: { model.settings.hapticsEnabled },

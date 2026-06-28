@@ -21,6 +21,7 @@ struct AppRootView: View {
                     }
             }
         }
+        .preferredColorScheme(model.settings.appearance == .dark ? .dark : .light)
         .task {
             try? await Task.sleep(for: .seconds(1.5))
             withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }

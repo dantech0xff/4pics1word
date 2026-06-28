@@ -1,7 +1,13 @@
 import Foundation
 
+enum AppearancePreference: String, Codable, CaseIterable {
+    case light
+    case dark
+}
+
 struct Settings: Codable, Equatable {
     var hapticsEnabled: Bool = true
+    var appearance: AppearancePreference = .light
 
     static let key = "settings.v1"
 

@@ -92,6 +92,11 @@ final class AppModel {
         settings.save()
     }
 
+    func updateAppearance(_ preference: AppearancePreference) {
+        settings.appearance = preference
+        settings.save()
+    }
+
     /// Unique photo attributions across all bundled levels (legal: credit all included art).
     var allCredits: [String] {
         let seen = NSMutableOrderedSet()
