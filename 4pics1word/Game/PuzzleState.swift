@@ -28,8 +28,14 @@ final class PuzzleState {
     var coins: Int
     private(set) var phase: PuzzlePhase = .playing
 
-    /// Increments on each full-but-wrong clear. UI observes to trigger shake animation.
+    /// Increments on each full-but-wrong submission. UI observes to trigger the
+    /// rejection animation (red glow + shake) BEFORE the deferred clear.
     private(set) var wrongAttemptToken: Int = 0
+
+    /// True between a wrong submit and the corresponding `clearWrongAttempt()` call.
+    /// Gates all tile/hint mutations via `canMutate` so the rejection animation
+    /// plays on a stable board; GameView clears the flag (and tiles) post-animation.
+    private(set) var isRejecting: Bool = false
 
     /// Increments exactly once on solve, BEFORE `onSolved` fires. UI observes to trigger
     /// the celebration wave (mirrors `wrongAttemptToken`).
@@ -70,6 +76,9 @@ final class PuzzleState {
 
     // MARK: - Hint availability (read-only, for UI button state)
 
+    /// Single gate for all tile/hint mutations: solve-won OR in-flight rejection blocks input.
+    private var canMutate: Bool { phase == .playing && !isRejecting }
+
     var hasUnrevealedSlot: Bool {
         (0..<slotCount).contains { slotTile[$0]?.character != solution[$0] }
     }
@@ -89,9 +98,9 @@ final class PuzzleState {
         return surplus
     }
 
-    var canReveal: Bool { phase == .playing && coins >= HintCost.reveal && hasUnrevealedSlot }
-    var canRemove: Bool { phase == .playing && coins >= HintCost.remove && surplusBankCount > 0 }
-    var canShuffle: Bool { phase == .playing && bankOrder.count > 1 }
+    var canReveal: Bool { canMutate && coins >= HintCost.reveal && hasUnrevealedSlot }
+    var canRemove: Bool { canMutate && coins >= HintCost.remove && surplusBankCount > 0 }
+    var canShuffle: Bool { canMutate && bankOrder.count > 1 }
 
     // MARK: - Tile lookup (by id, never array position)
 
@@ -106,7 +115,7 @@ final class PuzzleState {
 
     /// Tap a bank tile → fill the first empty slot. Validates when board fills.
     func placeTile(_ id: Int) {
-        guard phase == .playing else { return }
+        guard canMutate else { return }
         guard let t = tile(id), t.slot == nil, !t.discarded else { return }
         guard let firstEmpty = (0..<slotCount).first(where: { slotTile[$0] == nil }) else { return }
         mutateTile(id) { $0.slot = firstEmpty }
@@ -116,7 +125,7 @@ final class PuzzleState {
 
     /// Tap a filled, non-locked slot → return tile to bank. Never triggers evaluate.
     func removeTile(_ id: Int) {
-        guard phase == .playing else { return }
+        guard canMutate else { return }
         guard let t = tile(id), t.slot != nil, !t.locked, !t.discarded else { return }
         mutateTile(id) { $0.slot = nil }
         if !bankOrder.contains(id) { bankOrder.append(id) }
@@ -174,14 +183,26 @@ final class PuzzleState {
             solvedToken &+= 1
             onSolved(self)
         } else {
-            for index in tiles.indices {
-                if tiles[index].slot != nil && !tiles[index].locked {
-                    let id = tiles[index].id
-                    tiles[index].slot = nil
-                    if !bankOrder.contains(id) { bankOrder.append(id) }
-                }
-            }
+            // Defer tile-clear until clearWrongAttempt() fires from GameView post-animation.
+            // Order matters: flag set BEFORE token bump so onChange observers see it.
+            isRejecting = true
             wrongAttemptToken &+= 1
         }
+    }
+
+    /// GameView calls this AFTER the rejection glow+shake finishes (or immediately
+    /// under reduce-motion). Returns non-locked slotted tiles to the bank, preserving
+    /// locked hints (invariant I7). Idempotent: `guard isRejecting` makes repeat calls
+    /// no-ops, so a missed driver call cannot corrupt state.
+    func clearWrongAttempt() {
+        guard isRejecting else { return }
+        for index in tiles.indices {
+            if tiles[index].slot != nil && !tiles[index].locked {
+                let id = tiles[index].id
+                tiles[index].slot = nil
+                if !bankOrder.contains(id) { bankOrder.append(id) }
+            }
+        }
+        isRejecting = false
     }
 }
