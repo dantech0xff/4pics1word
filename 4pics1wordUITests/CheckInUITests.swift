@@ -62,11 +62,38 @@ final class CheckInUITests: XCTestCase {
 
         let sheet = app.otherElements[Self.checkInView]
         XCTAssertTrue(sheet.waitForExistence(timeout: 25))
-        app.buttons["Close"].tap() // explicit dismiss (deterministic vs swipe gesture)
 
-        let toolbar = app.buttons["Daily check-in, reward available"]
+        // Phase 01 gate: Close is disabled pre-claim. Must claim first to enable dismissal.
+        let claim = app.buttons["Claim 20 coins"]
+        XCTAssertTrue(claim.waitForExistence(timeout: 5), "Day-1 Claim button not found")
+        claim.tap()
+
+        // Post-claim Close is enabled → explicit dismiss (deterministic vs swipe gesture).
+        let close = app.buttons["Close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertTrue(close.isEnabled, "Close must be enabled after claim (gate should have lifted)")
+        close.tap()
+
+        let toolbar = app.buttons["Daily check-in"]
         XCTAssertTrue(toolbar.waitForExistence(timeout: 5), "Check-in toolbar button not found after dismiss")
         toolbar.tap()
         XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Toolbar button did not reopen the sheet")
+    }
+
+    func testCloseIsDisabledBeforeClaim() {
+        let app = XCUIApplication()
+        app.launchArguments += [Self.resetFlag]
+        app.launch()
+
+        let sheet = app.otherElements[Self.checkInView]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 25))
+
+        // Gate contract: Close exists, is in the a11y tree, but is disabled while reward claimable.
+        let close = app.buttons["Close"]
+        XCTAssertTrue(close.exists, "Close button must remain in the accessibility tree when disabled")
+        XCTAssertFalse(close.isEnabled, "Close must be disabled while reward is claimable")
+
+        // Tap on a disabled button is a no-op for XCTest; sheet must stay presented.
+        XCTAssertTrue(sheet.exists, "Sheet should not dismiss pre-claim")
     }
 }
