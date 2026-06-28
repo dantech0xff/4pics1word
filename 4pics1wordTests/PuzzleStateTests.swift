@@ -91,7 +91,7 @@ struct PuzzleStateWinTests {
     }
 
     @Test
-    func wrongFillClearsNonLockedAndStaysPlaying() {
+    func wrongFillDefersClearThenClearsNonLocked() {
         let state = makeState("MOUSE", pool: "MOUSEAXYZBCD")
         // Place a wrong letter (A) in slot 0, then O U S E in 1..4
         placeChar(state, "A")  // slot 0 (wrong, needs M)
@@ -99,11 +99,16 @@ struct PuzzleStateWinTests {
         placeChar(state, "U")
         placeChar(state, "S")
         placeChar(state, "E")
-        // The 5th placement fills the board; evaluate() runs immediately, sees it's wrong,
-        // and auto-clears all non-locked tiles (spec §4.3). So the board is NOT full anymore.
-        #expect(!state.isFull)
-        #expect(state.phase == .playing)           // not won
+        // The 5th placement fills the board; evaluate() runs immediately, sees it's wrong.
+        // Clear is now DEFERRED: tiles stay populated, rejection flag set, token bumped.
+        #expect(state.isFull, "Tiles stay populated during rejection (deferred clear)")
+        #expect(state.phase == .playing)            // not won
+        #expect(state.isRejecting == true)
         #expect(state.wrongAttemptToken == 1)
+        // GameView fires the finisher after the rejection animation:
+        state.clearWrongAttempt()
+        #expect(!state.isFull)
+        #expect(state.isRejecting == false)
         #expect(state.slotTile.allSatisfy { $0 == nil }, "All non-locked tiles returned to bank")
         #expect(state.bankTiles.count == 12, "All tiles back in bank")
     }
@@ -118,8 +123,10 @@ struct PuzzleStateWinTests {
         placeChar(state, "A")  // slot 1 (wrong, needs O)
         placeChar(state, "X")  // slot 2 (wrong)
         placeChar(state, "Y")  // slot 3 (wrong)
-        placeChar(state, "Z")  // slot 4 (wrong) → board full → evaluate → wrong → clear non-locked
-        #expect(!state.isFull)                      // slots 1-4 cleared by auto-evaluate
+        placeChar(state, "Z")  // slot 4 (wrong) → board full → evaluate → wrong → DEFERRED clear
+        #expect(state.isRejecting == true)          // clear deferred
+        state.clearWrongAttempt()                    // finisher fires
+        #expect(!state.isFull)                       // slots 1-4 cleared by finisher
         #expect(state.phase == .playing)
         // Locked slot 0 survives
         #expect(state.slotTile[0]?.character == "M")
