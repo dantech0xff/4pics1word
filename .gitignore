@@ -8,5 +8,8 @@ DerivedData/
 .tmp/
 derived/
 
+# OpenCode local tooling config (scout-block allowlist, etc.)
+.opencode/
+
 # macOS
 .DS_Store

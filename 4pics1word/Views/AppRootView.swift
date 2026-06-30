@@ -21,10 +21,10 @@ struct AppRootView: View {
                         gameLayer
                     }
                     .sheet(isPresented: $showCheckinSheet) {
-                        CheckInView(model: model) { showCheckinSheet = false }
-                            .presentationDetents([.medium, .large])
+                        CheckInView(model: model)
+                            .presentationDetents([.medium])
                             .presentationDragIndicator(.visible)
-                            .interactiveDismissDisabled(!model.canCheckInToday)
+                            .interactiveDismissDisabled(model.canCheckInToday)
                     }
             }
         }
