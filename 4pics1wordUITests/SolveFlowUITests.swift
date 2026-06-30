@@ -14,8 +14,10 @@ final class SolveFlowUITests: XCTestCase {
         play.tap()
 
         // Solve MOUSE by tapping each needed letter (auto-fills first empty slot).
+        // The bank pool can contain duplicate decoy letters, so match the first
+        // available tile rather than assuming a unique label per character.
         for letter in ["M", "O", "U", "S", "E"] {
-            let tile = app.buttons[letter]
+            let tile = app.buttons.matching(identifier: letter).firstMatch
             XCTAssertTrue(tile.waitForExistence(timeout: 5), "Bank tile \(letter) not found")
             tile.tap()
         }
