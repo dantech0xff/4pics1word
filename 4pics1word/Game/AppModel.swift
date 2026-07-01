@@ -20,6 +20,9 @@ final class AppModel {
     var gameState: PuzzleState?
     var lastReward: Int = 0
     var lastCheckInReward: Int = 0
+    /// Set on the first ever solve so AppRootView can present the ATT explainer sheet.
+    /// Gated to present only when `phase == .home` (see AppRootView) to avoid clashing with WinView.
+    var shouldShowAttExplainer = false
     let ads: AdsManaging
     /// Safety-net Task that flips `.celebrating` → `.won` if GameView's wave-driver
     /// never calls `completeSolve()` (e.g. view dismissed mid-wave). Normal path is
@@ -91,6 +94,14 @@ final class AppModel {
         progress.currentLevelIndex = (progress.currentLevelIndex + 1) % totalLevels
         lastReward = reward
         store.save(progress)
+        // ATT prompt timing (locked decision): after the FIRST ever solve. Flip the flag
+        // synchronously so it can't re-fire; AppRootView presents the explainer sheet when
+        // the player is back at home (gated by phase to avoid clashing with WinView).
+        if !progress.hasSeenAttPrompt {
+            progress.hasSeenAttPrompt = true
+            store.save(progress)
+            shouldShowAttExplainer = true
+        }
         phase = .celebrating
         celebrationTask?.cancel()
         celebrationTask = Task { @MainActor [weak self] in
@@ -131,7 +142,31 @@ final class AppModel {
     func nextLevel() {
         celebrationTask?.cancel(); celebrationTask = nil
         guard hasNextLevel else { phase = .home; return }
+        progress.levelsCompletedSinceInterstitial += 1
+        if shouldShowInterstitial {
+            progress.levelsCompletedSinceInterstitial = 0
+            progress.lastInterstitialAt = Date()
+            store.save(progress)
+            ads.maybeShowInterstitial()
+        }
         startLevel(at: progress.currentLevelIndex)
+    }
+
+    /// Interstitial eligibility: every 3rd completed level AND ≥60s since the last show.
+    /// `AppModel` owns the math (unit-testable via `MockAdsManager`); `ads.maybeShowInterstitial`
+    /// only checks ad-readiness.
+    private var shouldShowInterstitial: Bool {
+        let cooldown: TimeInterval = 60
+        let last = progress.lastInterstitialAt ?? .distantPast
+        return progress.levelsCompletedSinceInterstitial >= 3
+            && Date().timeIntervalSince(last) >= cooldown
+    }
+
+    /// Reward-video payout path. Called from `AdsManager.showRewarded`'s earn-reward closure.
+    /// Single mutation gate: coin changes flow through AppModel, persist synchronously.
+    func grantRewardCoins(_ amount: Int) {
+        progress.coins += amount
+        store.save(progress)
     }
 
     func exitToHome() {

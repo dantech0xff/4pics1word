@@ -29,15 +29,31 @@ struct AppRootView: View {
             }
         }
         .preferredColorScheme(model.settings.appearance == .dark ? .dark : .light)
+        .sheet(isPresented: attExplainerBinding) {
+            ATTExplainerView {
+                model.shouldShowAttExplainer = false
+                ATTRequester.requestIfNeeded { }
+            }
+        }
         .task {
             try? await Task.sleep(for: .seconds(1.5))
             withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
+            model.ads.start()
             if model.canCheckInToday && !model.hasSeenCheckinSheetToday {
                 try? await Task.sleep(for: .seconds(0.4))
                 showCheckinSheet = true
                 model.markCheckinSheetSeen()
             }
         }
+    }
+
+    /// Present the ATT explainer only when back at home (avoids clashing with WinView's sheet
+    /// during the `.celebrating`/`.won` flow). Dismissal clears the flag so it never re-fires.
+    private var attExplainerBinding: Binding<Bool> {
+        Binding(
+            get: { model.shouldShowAttExplainer && model.phase == .home },
+            set: { if !$0 { model.shouldShowAttExplainer = false } }
+        )
     }
 
     private var navigationStack: some View {
