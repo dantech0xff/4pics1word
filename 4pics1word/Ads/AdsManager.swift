@@ -17,7 +17,7 @@ final class AdsManager: NSObject, AdsManaging, GADFullScreenContentDelegate, GAD
     private var interstitial: GADInterstitialAd?
     private var rewarded: GADRewardedAd?
 
-    override init() {
+    override nonisolated init() {
         super.init()
     }
 

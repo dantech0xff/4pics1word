@@ -20,6 +20,7 @@ final class AppModel {
     var gameState: PuzzleState?
     var lastReward: Int = 0
     var lastCheckInReward: Int = 0
+    let ads: AdsManaging
     /// Safety-net Task that flips `.celebrating` → `.won` if GameView's wave-driver
     /// never calls `completeSolve()` (e.g. view dismissed mid-wave). Normal path is
     /// the explicit `completeSolve()` from GameView at wave-end.
@@ -28,12 +29,14 @@ final class AppModel {
     init(service: LevelService = .load(),
          store: ProgressStore = .init(),
          settings: Settings? = nil,
-         settingsDefaults: UserDefaults = .standard) {
+         settingsDefaults: UserDefaults = .standard,
+         ads: AdsManaging = AdsManager()) {
         self.service = service
         self.store = store
         self.settingsDefaults = settingsDefaults
         self.settings = settings ?? Settings.load(defaults: settingsDefaults)
         self.progress = store.load()
+        self.ads = ads
         Feedback.enabled = self.settings.hapticsEnabled
     }
 
