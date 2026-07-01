@@ -121,6 +121,29 @@ Wire both networks up front.
 3. Run `/plan 2026-07-02-admob-integration` (this doc as context) to generate phase-by-phase implementation plan.
 
 ## Unresolved questions
-- Q1: Should rewarded video also unlock from the **hint-insufficient alert** (e.g., "Not enough coins — watch ad for +50?"), or only from a dedicated HomeView button? Recommended: both, but confirm.
+- Q1: Should rewarded video also unlock from the **hint-insufficient alert** (e.g., "Not enough coins — watch ad for +50?"), or only from a dedicated HomeView button? Recommended: both, but confirm. **→ RESOLVED (Phase 08): both implemented.**
 - Q2: Should the daily check-in sheet offer a "double reward via ad" upsell (common pattern)? Not in v1 — deferred; flag for roadmap.
-- Q3: Preferred banner size — adaptive anchored banner (Google recommended) vs legacy 320×50? Recommend adaptive.
+- Q3: Preferred banner size — adaptive anchored banner (Google recommended) vs legacy 320×50? Recommend adaptive. **→ RESOLVED (Phase 06): adaptive anchored banner.**
+
+---
+
+## Appendix — Implementation actuals (post-Phase 09)
+
+All 9 phases shipped. Final state:
+- **SDK:** GoogleMobileAds `11.13.0` + UserMessagingPlatform `2.7.0` (SPM, app target only).
+- **API notes (v11.13.0):** `GADMobileAds.sharedInstance().start()` (NOT `MobileAds.shared`); UMP via `UMPConsentInformation.sharedInstance` (class **property**, no parens), `requestConsentInfoUpdate(with:)`, `UMPConsentForm.loadAndPresentIfRequired(from:)`, `canRequestAds`. Rewarded grant via `present(fromRootViewController:userDidEarnRewardHandler:)` trailing closure.
+- **Info.plist gotcha:** `INFOPLIST_KEY_*` does NOT inject custom keys like `GADApplicationIdentifier` (only known Apple keys). Solved via `INFOPLIST_FILE = Info.plist` (project root) + `GENERATE_INFOPLIST_FILE = YES` merge — file carries `GADApplicationIdentifier` + `NSUserTrackingUsageDescription` + full `SKAdNetworkItems`; generated standard keys merge in.
+- **Tests:** 98 unit (89 + 9 new AdsTests) + 2 AdsUITests, all green. Release build green.
+
+## Appendix — App Store submission checklist (BLOCKED on AdMob account)
+
+> 🔴 **SUBMIT-BLOCKED.** Cannot ship until a real AdMob account + ad units replace the test IDs.
+
+Pre-submission, when real IDs are ready:
+1. **Register AdMob app + 3 ad units** (banner/interstitial/rewarded) → capture real App ID + ad-unit IDs.
+2. **Swap IDs** in `Info.plist` (`GADApplicationIdentifier`) + `4pics1word/Ads/AdsConfiguration.swift` (4 constants). No architecture change.
+3. **App Store Connect category:** do **NOT** pick "Kids" (primary or secondary) — AdMob is forbidden there. Use Casual / Puzzle / Word.
+4. **App Privacy questionnaire** — declare AdMob data collection: Identifiers (IDFA), Product Interaction, Advertising Data, Crash Data, Performance Data. (Already documented in `PrivacyInfo.xcprivacy`.)
+5. **Privacy Policy URL** must be live (required for apps using AdMob).
+6. **Real-device smoke** on TestFlight: verify fill rate >0 for all 3 formats; ATT prompt appears once after first solve; UMP form presents in EEA region.
+7. **Refresh `SKAdNetworkItems`** yearly (Google publishes the list; ~50 entries currently in `Info.plist`).

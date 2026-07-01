@@ -2,13 +2,14 @@
 
 Single-player iOS word game built in **SwiftUI**. Four pictures share one word — arrange the scrambled letter bank into the answer slots to solve. Earn coins per solve and via a 7-day daily check-in streak; spend coins on hints.
 
-Fully offline, no third-party dependencies (no SPM packages), no backend.
+Monetized with Google AdMob (banner / interstitial / rewarded) behind an `AdsManaging` protocol. Offline gameplay; ads are the only network surface.
 
 - **App target:** `4pics1word` · **Bundle ID:** `org.1588e22dda3a7db8.-pics1word` (iPhone + iPad)
 - **Language/UI:** Swift + SwiftUI (declarative; only `UIImage` touches UIKit)
 - **Toolchain:** Xcode 26.6 · **Deployment target:** iOS 26.5+
 - **State:** Swift `@Observable` (Observation) — no Combine
 - **Persistence:** `UserDefaults` (JSON-encoded `Progress` / `Settings`)
+- **Ads:** `GoogleMobileAds` 11.x via SPM (app target only); UMP consent; ATT after first solve
 
 ---
 
@@ -67,10 +68,14 @@ YAGNI + KISS. The app is offline, single-user, single-window. Observation gives 
 4pics1word/
 ├── 4pics1word/
 │   ├── _pics1wordApp.swift        # @main entry; hosts AppRootView; -uitest-reset hook
-│   ├── Views/                     # AppRootView, HomeView, GameView, CheckInView, WinView, …
+│   ├── Views/                     # AppRootView, HomeView, GameView, CheckInView, WinView, ATTExplainerView, …
 │   ├── Components/                # LetterBank, PictureGrid, AnswerSlots, TileButton, …
 │   ├── Game/                      # AppModel, PuzzleState, CheckIn, Economy, Feedback, Settings
-│   └── Data/                      # LevelService, Models, PoolFactory, ProgressStore, SplitMix64
+│   ├── Ads/                       # AdsManager, AdsManaging, AdsConfiguration, ATTRequester, BannerHostView
+│   ├── Data/                      # LevelService, Models, PoolFactory, ProgressStore, SplitMix64
+│   ├── PrivacyInfo.xcprivacy      # Google SDK privacy manifest
+│   └── Info.plist                 # custom keys: GADApplicationIdentifier, SKAdNetworkItems (merged w/ generated)
+├── Info.plist                     # GADApplicationIdentifier + SKAdNetworkItems (INFOPLIST_FILE; merged with generated keys)
 ├── 4pics1wordTests/               # Swift Testing (import Testing) — unit
 ├── 4pics1wordUITests/             # XCTest — UI
 ├── docs/                          # architecture, roadmap, standards, deploy, …
@@ -86,7 +91,7 @@ YAGNI + KISS. The app is offline, single-user, single-window. Observation gives 
 ### Prerequisites
 - **Xcode 26.6+** (needs the iOS 26.5 SDK — a recent toolchain is required).
 - **File-system synchronized groups are ON** — any `.swift` file added to `4pics1word/`, `4pics1wordTests/`, or `4pics1wordUITests/` is auto-included in the target. Do **not** hand-edit `project.pbxproj` to register new files.
-- No `.xcworkspace`, no SPM resolution step, no `pod install` — just open the project.
+- **SPM:** the project resolves `GoogleMobileAds` (+ transitive `UserMessagingPlatform`). First build downloads the binary framework. Open `4pics1word.xcodeproj` directly (no `.xcworkspace`).
 
 ### Clone & open
 ```bash
@@ -142,6 +147,7 @@ Drop four images named `<puzzleId>_1.webp` … `<puzzleId>_4.webp` into the app 
 - 4-pics-1-word gameplay loop with seamless level wrap-around (count hidden).
 - Hint economy: Reveal (lock a correct letter), Remove (discard decoys), Shuffle (free).
 - Daily check-in sheet — 7-day streak, Day-7 jackpot, live midnight countdown, coin-fly + jackpot confetti.
+- AdMob monetization — HomeView banner; interstitial every 3rd level-complete (≥60s cooldown); rewarded video (+50 coins) from HomeView + hint-insufficient alert; ATT prompt after first solve; UMP consent for EEA/UK.
 - Tap-to-zoom image viewer; photo credits screen.
 - Light/Dark appearance toggle; haptics toggle; reset-progress.
 - Accessibility: reduce-motion, reduce-transparency, Dynamic Type (capped `.accessibility2`) gates throughout.
@@ -160,3 +166,5 @@ Full docs live in [`docs/`](./docs):
 
 ## Status
 Active development. No CI/CD, no Fastlane, no App Store submission pipeline yet — all builds/tests run locally via `xcodebuild`. See the [roadmap](./docs/project-roadmap.md).
+
+> ⚠️ **Submit-blocked on AdMob account.** The app currently uses Google's sample/test ad-unit IDs in both Debug and Release (no AdMob account registered). It **cannot ship to the App Store** in this state — Apple rejects test ads and AdMob pays $0. When a real account + ad units are registered, swap the IDs in `Info.plist` (`GADApplicationIdentifier`) and `4pics1word/Ads/AdsConfiguration.swift`. No architecture change required.

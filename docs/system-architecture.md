@@ -51,6 +51,16 @@ SplashView (1.5s) → NavigationStack { HomeView }
 ### Feedback (`Feedback`)
 - UIKit haptics only (no audio). Cached generators warmed via `prepareCelebration`. `enabled` mirrors settings.
 
+### Ads (`AdsManager` + `AppModel` integration)
+- `AdsManaging` protocol (seam) + concrete `AdsManager` (`@Observable @MainActor`, GAD delegates); `MockAdsManager` in unit tests.
+- **Banner:** `BannerHostView` (UIViewControllerRepresentable) hosts adaptive `GADBannerView`; HomeView bottom only, never during gameplay.
+- **Interstitial:** `AppModel.nextLevel()` advances `progress.levelsCompletedSinceInterstitial`; shows when `>= 3 && Date() - lastInterstitialAt >= 60s`. Cadence math lives in AppModel (testable); `ads.maybeShowInterstitial()` only checks ad-readiness.
+- **Rewarded:** `+50 coins` (`Economy.rewardedAdPayout`). Exposed via HomeView "Free Coins" button (when `coins < HintCost.remove`) + GameView hint-insufficient alert. Grant fires in the SDK's earn-reward closure (never on dismiss) → `AppModel.grantRewardCoins(_:)` persists synchronously.
+- **ATT:** `ATTRequester` wraps `ATTrackingManager`; prompt after the FIRST solve (`progress.hasSeenAttPrompt`), gated to present only at `phase == .home` to avoid WinView clash. NPA extra attached while unauthorized so banner still fills.
+- **UMP:** `requestConsentInfoUpdate` → `UMPConsentForm.loadAndPresentIfRequired` runs in `AdsManager.start()` (EEA/UK consent).
+- **Kill-switch:** `AdsConfiguration.isAdsDisabled` reads the `-uitest-reset` launch arg; all ad surfaces no-op / not composed under it (keeps UI tests network-free).
+- **Config:** `AdsConfiguration` holds ad-unit IDs (Google sample/test IDs — dev only; submit-blocked until real AdMob account).
+
 ## Solve lifecycle (cross-component)
 ```
 board full → PuzzleState.evaluate() → onSolved(PuzzleState)

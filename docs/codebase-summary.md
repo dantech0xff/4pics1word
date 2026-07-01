@@ -11,6 +11,7 @@ Folder layout and one-line purpose per key file. Last updated: 2026-06-30.
 - `GameView.swift` — main gameplay: header(exit/level/coins), `PictureGrid`, `AnswerSlots`, hint bar (Reveal/Remove/Shuffle), `LetterBank`; owns celebration-wave + wrong-answer haptic drivers.
 - `CheckInView.swift` — daily-reward sheet: 3-3-1 grid, claimed-check tiles, jackpot Day-7 horizontal layout, live midnight countdown, coin-fly-to-header animation, jackpot confetti.
 - `WinView.swift` — solve sheet: seal icon, revealed word, `+reward` / total, Next Level / Home buttons.
+- `ATTExplainerView.swift` — one-shot pre-prompt sheet (value-framed copy) before the system ATT dialog; "Continue" triggers `ATTRequester.requestIfNeeded`.
 - `SplashView.swift` — 1.5s launch splash over `splashBackground` image; accessibility-hidden.
 - `SettingsView.swift` — Form: appearance (light/dark segmented), haptics toggle, reset progress (confirmation), credits link, version.
 - `CreditsView.swift` — `List` of unique photo attributions across all bundled levels (legal).
@@ -34,13 +35,20 @@ Folder layout and one-line purpose per key file. Last updated: 2026-06-30.
 
 ## `4pics1word/Data/` — persistence + loading
 - `LevelService.swift` — loads `puzzles.json` + `strategy.json` from bundle; filters to puzzles with bundled `.webp` images; `subscript`/`puzzle(byId:)`; `Strategy.tier(for:)`.
-- `Models.swift` — `Puzzle`, `PuzzleData`, `Strategy`, `Progress` (level index, coins, solved IDs, streak, lifetime check-ins, anti-rewind watermark).
+- `Models.swift` — `Puzzle`, `PuzzleData`, `Strategy`, `Progress` (level index, coins, solved IDs, streak, lifetime check-ins, anti-rewind watermark, interstitial counter, `lastInterstitialAt`, `hasSeenAttPrompt`).
 - `ProgressStore.swift` — `UserDefaults` JSON codec for `Progress`, key `progress.v1`; `load`/`save`/`reset`.
 - `PoolFactory.swift` — builds scrambled letter pool (solution + decoys, `poolSize = max(12, len+3)`); seeded by `SplitMix64(puzzle.id.stableSeed)` for determinism.
 - `SplitMix64.swift` — `RandomNumberGenerator` impl; `Int.stableSeed` extension.
 
+## `4pics1word/Ads/` — AdMob integration
+- `AdsManager.swift` — `@Observable @MainActor` concrete `AdsManaging`; GAD interstitial/rewarded/banner delegate; SDK init → UMP → preload; NPA extra while ATT unauthorized; `topViewController()` helper.
+- `AdsManaging.swift` — `@MainActor` protocol seam (`start`/`preloadRewarded`/`showRewarded`/`maybeShowInterstitial`/`bannerReady`) + `RewardGrant` typealias.
+- `AdsConfiguration.swift` — ad-unit IDs (Google sample/test IDs — dev only) + `isAdsDisabled` kill-switch (reads `-uitest-reset`).
+- `ATTRequester.swift` — `ATTrackingManager` wrapper; `shouldUseNonPersonalizedAds()`; `requestIfNeeded(then:)`.
+- `BannerHostView.swift` — `UIViewControllerRepresentable` hosting adaptive `GADBannerView`; `adBanner` a11y id on the host view.
+
 ## Tests
-- `4pics1wordTests/` — Swift Testing: `CheckInTests`, `PuzzleStateTests`, `PuzzleStateHintTests`, `PuzzleStateWrongAttemptTests`, `PoolFactoryTests`, `AppModelTests`, `AppModelCheckInTests`, `AppModelCelebrationTests`.
-- `4pics1wordUITests/` — XCTest: `CheckInUITests`, `ImageZoomUITests`, `SolveFlowUITests`, launch/launch-tests.
+- `4pics1wordTests/` — Swift Testing: `CheckInTests`, `PuzzleStateTests`, `PuzzleStateHintTests`, `PuzzleStateWrongAttemptTests`, `PoolFactoryTests`, `AppModelTests`, `AppModelCheckInTests`, `AppModelCelebrationTests`, `AdsTests` (interstitial cadence, reward idempotency, ATT first-solve, Progress backward-compat). `MockAdsManager.swift` is the test double.
+- `4pics1wordUITests/` — XCTest: `CheckInUITests`, `ImageZoomUITests`, `SolveFlowUITests`, `AdsUITests` (banner present/absent under kill-switch), launch/launch-tests.
 
 See [system-architecture.md](./system-architecture.md) for runtime flow and [code-standards.md](./code-standards.md) for conventions.

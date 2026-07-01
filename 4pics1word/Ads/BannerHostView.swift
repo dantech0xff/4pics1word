@@ -13,6 +13,7 @@ struct BannerHostView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIViewController {
         let host = UIViewController()
+        host.view.accessibilityIdentifier = "adBanner"
         guard !AdsConfiguration.isAdsDisabled else { return host }
 
         // Adaptive banner size from the available width (falls back to screen width before layout).

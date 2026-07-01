@@ -3,6 +3,7 @@
 Status as of 2026-06-30. Derived from `git log --oneline` and `plans/`. Last updated: 2026-06-30.
 
 ## Shipped (committed)
+- **AdMob integration (banner / interstitial / rewarded)** — GoogleMobileAds 11.x via SPM (app target only); `AdsManaging` protocol + `AdsManager` (`@Observable @MainActor`); HomeView adaptive banner; interstitial every 3rd level-complete (≥60s cooldown); rewarded +50 coins (HomeView button + hint-insufficient alert); ATT prompt after first solve; UMP consent; `PrivacyInfo.xcprivacy`; `-uitest-reset` kill-switch. **⚠️ Submit-blocked**: uses Google sample/test ad IDs (no AdMob account); swap to real IDs in `Info.plist` + `AdsConfiguration` before App Store submission.
 - **MVP** — gameplay loop, letter bank, answer slots, hints, economy, level progression (commit `2026-06-28-mvp`).
 - **Tap-zoom image viewer** — hero-zoom within grid area, photo credits, dismiss (feat `26659c8`, test `404d088`).
 - **Seamless level loop** — hide progress count, wrap-around, appearance persistence (`1a2b715`, test `6a31082`).

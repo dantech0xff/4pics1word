@@ -34,7 +34,6 @@ struct HomeView: View {
             if !AdsConfiguration.isAdsDisabled, let adsManager = model.ads as? AdsManager {
                 BannerHostView(ads: adsManager)
                     .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier("adBanner")
             }
         }
         .padding(.horizontal, 24)
