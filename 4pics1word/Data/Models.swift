@@ -40,12 +40,16 @@ struct Progress: Codable, Equatable {
     var streakDays: Int = 0
     var lifetimeCheckIns: Int = 0
     var lastKnownNow: Date?
+    var levelsCompletedSinceInterstitial: Int = 0
+    var lastInterstitialAt: Date?
+    var hasSeenAttPrompt: Bool = false
 
     static let startingCoins = 100
 
     private enum CodingKeys: String, CodingKey {
         case currentLevelIndex, coins, solvedIds
         case lastCheckInDate, streakDays, lifetimeCheckIns, lastKnownNow
+        case levelsCompletedSinceInterstitial, lastInterstitialAt, hasSeenAttPrompt
     }
 
     init() {}
@@ -59,5 +63,8 @@ struct Progress: Codable, Equatable {
         streakDays = try c.decodeIfPresent(Int.self, forKey: .streakDays) ?? 0
         lifetimeCheckIns = try c.decodeIfPresent(Int.self, forKey: .lifetimeCheckIns) ?? 0
         lastKnownNow = try c.decodeIfPresent(Date.self, forKey: .lastKnownNow)
+        levelsCompletedSinceInterstitial = try c.decodeIfPresent(Int.self, forKey: .levelsCompletedSinceInterstitial) ?? 0
+        lastInterstitialAt = try c.decodeIfPresent(Date.self, forKey: .lastInterstitialAt)
+        hasSeenAttPrompt = try c.decodeIfPresent(Bool.self, forKey: .hasSeenAttPrompt) ?? false
     }
 }
