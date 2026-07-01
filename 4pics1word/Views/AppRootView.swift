@@ -75,7 +75,10 @@ struct AppRootView: View {
                 state: state,
                 levelNumber: model.currentLevelNumber,
                 onExit: { model.exitToHome() },
-                onSolved: { model.completeSolve() }
+                onSolved: { model.completeSolve() },
+                onWatchAd: {
+                    model.ads.showRewarded { model.grantRewardCoins(Economy.rewardedAdPayout) }
+                }
             )
             .sheet(isPresented: showWin) {
                 WinView(model: model)

@@ -9,10 +9,14 @@ struct GameView: View {
     var onExit: () -> Void = {}
     /// Fired at celebration-wave end → `AppModel.completeSolve()` → `.won` → WinView sheet.
     var onSolved: () -> Void = {}
+    /// Fired when the player taps an unaffordable hint and chooses "Watch Ad" in the insufficient-
+    /// coins alert. AppRootView wires it to `ads.showRewarded { grantRewardCoins(…) }`.
+    var onWatchAd: () -> Void = {}
 
     @State private var zoomedIndex: Int?
     @State private var waveTask: Task<Void, Never>?
     @State private var wrongTask: Task<Void, Never>?
+    @State private var showInsufficientCoins = false
     @Namespace private var zoomNS
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -27,6 +31,12 @@ struct GameView: View {
         }
         .padding(.vertical, 12)
         .background(Color(.systemBackground).ignoresSafeArea())
+        .alert("Not enough coins", isPresented: $showInsufficientCoins) {
+            Button("Watch Ad (+\(Economy.rewardedAdPayout))") { onWatchAd() }
+            Button("Not now", role: .cancel) {}
+        } message: {
+            Text("Watch a short ad to earn \(Economy.rewardedAdPayout) coins for hints?")
+        }
         .onChange(of: state.wrongAttemptToken) { _, new in
             // Wrong submit: AnswerSlots self-observes `wrongAttemptToken` for the red
             // glow + shake; GameView owns the haptic + the deferred clear (single source
@@ -126,11 +136,11 @@ struct GameView: View {
 
     private var hintBar: some View {
         HStack(spacing: 14) {
-            hintButton(label: "Reveal", icon: "lightbulb", cost: HintCost.reveal, enabled: state.canReveal) {
-                state.revealHint()
+            hintButton(label: "Reveal", icon: "lightbulb", cost: HintCost.reveal, enabled: state.canAttemptReveal) {
+                if state.canReveal { state.revealHint() } else { showInsufficientCoins = true }
             }
-            hintButton(label: "Remove", icon: "minus.circle", cost: HintCost.remove, enabled: state.canRemove) {
-                state.removeHint()
+            hintButton(label: "Remove", icon: "minus.circle", cost: HintCost.remove, enabled: state.canAttemptRemove) {
+                if state.canRemove { state.removeHint() } else { showInsufficientCoins = true }
             }
             hintButton(label: "Shuffle", icon: "shuffle", cost: HintCost.shuffle, enabled: state.canShuffle) {
                 state.shuffle()

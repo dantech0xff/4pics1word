@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     let model: AppModel
     @Binding var showCheckin: Bool
+    @State private var rewardAdInFlight = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -12,6 +13,22 @@ struct HomeView: View {
             Spacer()
             playButton
             progressLabel
+            if !AdsConfiguration.isAdsDisabled && model.progress.coins < HintCost.remove {
+                Button {
+                    rewardAdInFlight = true
+                    model.ads.showRewarded {
+                        model.grantRewardCoins(Economy.rewardedAdPayout)
+                        rewardAdInFlight = false
+                    }
+                } label: {
+                    Label("Free Coins (+\(Economy.rewardedAdPayout))", systemImage: "play.rectangle.fill")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .disabled(rewardAdInFlight)
+            }
             Spacer()
             Spacer()
             if !AdsConfiguration.isAdsDisabled, let adsManager = model.ads as? AdsManager {

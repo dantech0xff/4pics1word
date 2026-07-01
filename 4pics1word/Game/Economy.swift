@@ -8,6 +8,8 @@ enum HintCost {
 
 enum Economy {
     static let startingCoins: Int = 100
+    /// Coins granted by a completed rewarded video. Fits the economy (~1 Remove hint or ~2 Reveals).
+    static let rewardedAdPayout: Int = 50
 
     static func reward(forTier tier: Int) -> Int {
         25 + 5 * tier

@@ -102,6 +102,12 @@ final class PuzzleState {
     var canRemove: Bool { canMutate && coins >= HintCost.remove && surplusBankCount > 0 }
     var canShuffle: Bool { canMutate && bankOrder.count > 1 }
 
+    /// Actionable regardless of coin affordability. Lets the UI keep the button tappable when
+    /// coins are the only blocker, so the player can be offered a rewarded-video path. The hint
+    /// method itself still no-ops if unaffordable (`guard canReveal`/`guard canRemove`).
+    var canAttemptReveal: Bool { canMutate && hasUnrevealedSlot }
+    var canAttemptRemove: Bool { canMutate && surplusBankCount > 0 }
+
     // MARK: - Tile lookup (by id, never array position)
 
     func tile(_ id: Int) -> Tile? { tiles.first { $0.id == id } }
