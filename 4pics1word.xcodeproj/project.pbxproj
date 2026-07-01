@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		ABCD00030000000000000003 /* GoogleMobileAds in Frameworks */ = {
+			isa = PBXBuildFile;
+			productRef = ABCD00020000000000000002 /* GoogleMobileAds */;
+		};
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		3715AF952FF041C900147A48 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +59,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD00030000000000000003 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +120,7 @@
 			);
 			name = 4pics1word;
 			packageProductDependencies = (
+				ABCD00020000000000000002 /* GoogleMobileAds */,
 			);
 			productName = 4pics1word;
 			productReference = 3715AF872FF041C700147A48 /* 4pics1word.app */;
@@ -195,6 +204,9 @@
 			);
 			mainGroup = 3715AF7E2FF041C700147A48;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ABCD00010000000000000001 /* XCRemoteSwiftPackageReference "GoogleMobileAds" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3715AF882FF041C700147A48 /* Products */;
 			projectDirPath = "";
@@ -400,6 +412,8 @@
 				DEVELOPMENT_TEAM = CTSG43U4D8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_GADApplicationIdentifier = "ca-app-pub-3940256099942544~1458002511";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Your data keeps this game free by enabling more relevant ads. No personal data is sold.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -432,6 +446,8 @@
 				DEVELOPMENT_TEAM = CTSG43U4D8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_GADApplicationIdentifier = "ca-app-pub-3940256099942544~1458002511";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Your data keeps this game free by enabling more relevant ads. No personal data is sold.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -578,6 +594,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		ABCD00010000000000000001 /* XCRemoteSwiftPackageReference "GoogleMobileAds" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ABCD00020000000000000002 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ABCD00010000000000000001 /* XCRemoteSwiftPackageReference "GoogleMobileAds" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3715AF7F2FF041C700147A48 /* Project object */;
 }
