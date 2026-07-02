@@ -164,8 +164,16 @@ final class AppModel {
 
     /// Reward-video payout path. Called from `AdsManager.showRewarded`'s earn-reward closure.
     /// Single mutation gate: coin changes flow through AppModel, persist synchronously.
+    ///
+    /// Grants to BOTH `progress.coins` (persisted, shown on HomeView) AND the live `gameState.coins`
+    /// (shown in GameView's CoinCounter + drives hint affordability via `state.canReveal`). Without
+    /// the gameState sync, a reward earned from the hint-insufficient alert mid-game would land in
+    /// progress but leave `state.coins` untouched — so the player couldn't spend it and the counter
+    /// wouldn't move. The existing exit/solve sync (`progress.coins = state.coins`) prevents any
+    /// double-counting.
     func grantRewardCoins(_ amount: Int) {
         progress.coins += amount
+        gameState?.coins += amount
         store.save(progress)
     }
 

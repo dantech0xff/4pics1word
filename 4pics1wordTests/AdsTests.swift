@@ -70,6 +70,22 @@ struct AdsTests {
     }
 
     @Test
+    func grantRewardCoins_syncs_active_game_state() {
+        let model = makeModel(mock: MockAdsManager())
+        model.continueGame()                       // active level -> gameState non-nil
+        guard let state = model.gameState else {
+            Issue.record("gameState should be set")
+            return
+        }
+        let stateBefore = state.coins
+        let progressBefore = model.progress.coins
+        model.grantRewardCoins(Economy.rewardedAdPayout)
+        // Live puzzle balance must update so hints become affordable + GameView counter moves.
+        #expect(state.coins == stateBefore + Economy.rewardedAdPayout)
+        #expect(model.progress.coins == progressBefore + Economy.rewardedAdPayout)
+    }
+
+    @Test
     func rewarded_grant_fires_once_only() {
         let mock = MockAdsManager()
         let model = makeModel(mock: mock)
