@@ -89,7 +89,8 @@ final class AppModel {
         let reward = Economy.reward(forTier: tier)
         progress.coins = state.coins + reward
         progress.solvedIds.insert(state.puzzle.id)
-        GameCenter.submitScore(progress.solvedIds.count)
+        progress.lifetimeSolved += 1
+        GameCenter.submitScore(progress.lifetimeSolved)
         // Loop seamlessly: after the final level, wrap back to the first.
         // The total is never surfaced to the user, so completion is invisible.
         progress.currentLevelIndex = (progress.currentLevelIndex + 1) % totalLevels
@@ -192,7 +193,10 @@ final class AppModel {
     func resetProgress() {
         celebrationTask?.cancel(); celebrationTask = nil
         store.reset()
+        let solved = progress.lifetimeSolved
         progress = Progress()
+        progress.lifetimeSolved = solved
+        store.save(progress)
         gameState = nil
         phase = .home
     }

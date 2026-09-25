@@ -15,13 +15,30 @@ enum GameCenter {
 
     static var isAuthenticated: Bool { GKLocalPlayer.local.isAuthenticated }
 
+    /// Dashboard open requested while the player was signed out — flushed once
+    /// authentication reports an authenticated player, dropped if sign-in is cancelled.
+    private static var pendingLeaderboardOpen = false
+    private static var onAuthenticated: (() -> Void)?
+
     /// Kicks off authentication at launch. GameKit invokes the handler with a sign-in
-    /// view controller when credentials are needed, which we present on the key window.
-    /// When the player is already signed in the handler fires once with a banner.
-    static func authenticate() {
+    /// view controller when credentials are needed, which we present on the key window;
+    /// when authentication resolves to a signed-in player (initial auth or a later
+    /// sign-in), `onAuthenticated` runs and any pending leaderboard open is flushed.
+    static func authenticate(onAuthenticated: (() -> Void)? = nil) {
+        if let onAuthenticated { Self.onAuthenticated = onAuthenticated }
         GKLocalPlayer.local.authenticateHandler = { viewController, _ in
             if let viewController {
                 present(viewController)
+                return
+            }
+            if GKLocalPlayer.local.isAuthenticated {
+                Self.onAuthenticated?()
+                if pendingLeaderboardOpen {
+                    pendingLeaderboardOpen = false
+                    triggerLeaderboard()
+                }
+            } else {
+                pendingLeaderboardOpen = false
             }
         }
     }
@@ -42,9 +59,17 @@ enum GameCenter {
     /// as if the user tapped the access point widget. Re-runs authentication
     /// first when needed so an unsigned player gets the sign-in sheet.
     static func showLeaderboard() {
-        if !GKLocalPlayer.local.isAuthenticated {
+        guard GKLocalPlayer.local.isAuthenticated else {
+            // Hold the request — the auth handler opens the dashboard once sign-in
+            // completes instead of firing the trigger at a signed-out player.
+            pendingLeaderboardOpen = true
             authenticate()
+            return
         }
+        triggerLeaderboard()
+    }
+
+    private static func triggerLeaderboard() {
         GKAccessPoint.shared.trigger(
             leaderboardID: leaderboardID,
             playerScope: .global,

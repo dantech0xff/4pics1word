@@ -36,6 +36,10 @@ struct Progress: Codable, Equatable {
     var currentLevelIndex: Int = 0
     var coins: Int = Progress.startingCoins
     var solvedIds: Set<Int> = []
+    /// Total levels ever solved — survives `resetProgress`. This is the value
+    /// submitted to the Game Center leaderboard, so the score can only grow and
+    /// never disagrees with the board's keep-highest semantics.
+    var lifetimeSolved: Int = 0
     var lastCheckInDate: Date?
     var streakDays: Int = 0
     var lifetimeCheckIns: Int = 0
@@ -47,7 +51,7 @@ struct Progress: Codable, Equatable {
     static let startingCoins = 100
 
     private enum CodingKeys: String, CodingKey {
-        case currentLevelIndex, coins, solvedIds
+        case currentLevelIndex, coins, solvedIds, lifetimeSolved
         case lastCheckInDate, streakDays, lifetimeCheckIns, lastKnownNow
         case levelsCompletedSinceInterstitial, lastInterstitialAt, hasSeenAttPrompt
     }
@@ -59,6 +63,7 @@ struct Progress: Codable, Equatable {
         currentLevelIndex = try c.decodeIfPresent(Int.self, forKey: .currentLevelIndex) ?? 0
         coins = try c.decodeIfPresent(Int.self, forKey: .coins) ?? Progress.startingCoins
         solvedIds = try c.decodeIfPresent(Set<Int>.self, forKey: .solvedIds) ?? []
+        lifetimeSolved = try c.decodeIfPresent(Int.self, forKey: .lifetimeSolved) ?? solvedIds.count
         lastCheckInDate = try c.decodeIfPresent(Date.self, forKey: .lastCheckInDate)
         streakDays = try c.decodeIfPresent(Int.self, forKey: .streakDays) ?? 0
         lifetimeCheckIns = try c.decodeIfPresent(Int.self, forKey: .lifetimeCheckIns) ?? 0

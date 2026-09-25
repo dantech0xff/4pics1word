@@ -144,6 +144,18 @@ struct AppModelCheckInTests {
         #expect(model.canCheckInToday == true)
     }
 
+    @Test
+    func resetProgressPreservesLifetimeSolved() {
+        let (model, suite) = makeIsolatedModel()
+        defer { cleanup(suite) }
+
+        model.progress.lifetimeSolved = 7
+        model.resetProgress()
+
+        #expect(model.progress.solvedIds.isEmpty)
+        #expect(model.progress.lifetimeSolved == 7)
+    }
+
     // MARK: - canCheckInToday mirrors canClaim
 
     @Test
