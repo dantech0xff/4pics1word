@@ -38,6 +38,11 @@ struct AppRootView: View {
             try? await Task.sleep(for: .seconds(1.5))
             withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
             model.ads.start()
+            GameCenter.authenticate {
+                // Returning players may sign in with solves that predate Game Center —
+                // push their score so the leaderboard isn't empty until the next solve.
+                GameCenter.submitScore(model.progress.lifetimeSolved)
+            }
             await model.reconcileDailyReminder()
             if model.canCheckInToday && !model.hasSeenCheckinSheetToday {
                 try? await Task.sleep(for: .seconds(0.4))

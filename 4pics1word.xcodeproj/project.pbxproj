@@ -411,6 +411,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CTSG43U4D8;
 				ENABLE_PREVIEWS = YES;
+				CODE_SIGN_ENTITLEMENTS = "4pics1word/4pics1word.entitlements";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -444,6 +445,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CTSG43U4D8;
 				ENABLE_PREVIEWS = YES;
+				CODE_SIGN_ENTITLEMENTS = "4pics1word/4pics1word.entitlements";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

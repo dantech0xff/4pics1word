@@ -52,6 +52,12 @@ struct HomeView: View {
                     .foregroundStyle(model.canCheckInToday ? Color.accentColor : Color.primary)
             }
             .accessibilityLabel(model.canCheckInToday ? "Daily check-in, reward available" : "Daily check-in")
+            Button { GameCenter.showLeaderboard() } label: {
+                Image(systemName: "trophy")
+                    .font(.title2)
+                    .padding(8)
+            }
+            .accessibilityLabel("Leaderboard")
             NavigationLink(value: Route.settings) {
                 Image(systemName: "gearshape")
                     .font(.title2)
