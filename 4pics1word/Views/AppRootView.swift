@@ -39,6 +39,7 @@ struct AppRootView: View {
             withAnimation(.easeInOut(duration: 0.4)) { showSplash = false }
             model.ads.start()
             GameCenter.authenticate()
+            await model.reconcileDailyReminder()
             if model.canCheckInToday && !model.hasSeenCheckinSheetToday {
                 try? await Task.sleep(for: .seconds(0.4))
                 showCheckinSheet = true
