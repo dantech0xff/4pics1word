@@ -8,7 +8,6 @@ struct CheckInView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.dismiss) private var dismiss
 
     @State private var displayedCoins: Int = 0
     @State private var celebrate = false
@@ -55,7 +54,7 @@ struct CheckInView: View {
                 actionSection
             }
             .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.top, 24)
             .padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -78,21 +77,12 @@ struct CheckInView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Daily Reward")
-                    .font(.title3.weight(.bold))
-                Text(model.canCheckInToday
-                     ? "Claim every day to grow your streak"
-                     : "You're all set for today")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(alignment: .center, spacing: 10) {
+            Text("Daily Rewards")
+                .font(.title.weight(.bold))
             Spacer(minLength: 8)
             coinPill
-            closeButton
         }
-        .padding(.top, 4)
     }
 
     /// Compact balance pill — also the coin-fly animation's landing target.
@@ -117,20 +107,6 @@ struct CheckInView: View {
         )
         .accessibilityIdentifier("CheckInHeaderCounter")
         .accessibilityLabel("Balance, \(displayedCoins) coins")
-    }
-
-    private var closeButton: some View {
-        Button {
-            dismiss()
-        } label: {
-            Image(systemName: "xmark")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.secondary.opacity(0.12)))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Close daily reward")
     }
 
     /// 7-dot progress row above the grid: filled = claimed, ring = today, hollow = locked.
