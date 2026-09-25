@@ -1,6 +1,16 @@
 # 4 Pics 1 Word
 
-Single-player iOS word game built in **SwiftUI**. Four pictures share one word — arrange the scrambled letter bank into the answer slots to solve. Earn coins per solve and via a 7-day daily check-in streak; spend coins on hints.
+**Find the word that links the pictures.** A native iOS word-puzzle game built in SwiftUI — four photos, one answer, a scrambled letter bank. Solve puzzles to earn coins, spend them on hints, and keep a 7-day daily-reward streak alive.
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="220" alt="Home screen">
+  &nbsp;
+  <img src="docs/screenshots/gameplay.png" width="220" alt="Gameplay — four pictures, letter bank, hints">
+  &nbsp;
+  <img src="docs/screenshots/solved.png" width="220" alt="Solved — reward celebration">
+  &nbsp;
+  <img src="docs/screenshots/daily-rewards.png" width="220" alt="Daily rewards sheet">
+</p>
 
 Monetized with Google AdMob (banner / interstitial / rewarded) behind an `AdsManaging` protocol. Offline gameplay; ads are the only network surface.
 
