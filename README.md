@@ -3,13 +3,7 @@
 **Find the word that links the pictures.** A complete, monetization-ready iOS word-puzzle game built in SwiftUI — not a demo, not a tutorial stub. Fork it, drop in your own puzzles, plug in your AdMob account, and you have a shippable app.
 
 <p align="center">
-  <img src="docs/screenshots/home.png" width="220" alt="Home screen">
-  &nbsp;
-  <img src="docs/screenshots/gameplay.png" width="220" alt="Gameplay — four pictures, letter bank, hints">
-  &nbsp;
-  <img src="docs/screenshots/solved.png" width="220" alt="Solved — reward celebration">
-  &nbsp;
-  <img src="docs/screenshots/daily-rewards.png" width="220" alt="Daily rewards sheet">
+  <img src="docs/screenshots/hero.png" alt="Home · Gameplay · Solved · Daily Rewards">
 </p>
 
 <p align="center">
