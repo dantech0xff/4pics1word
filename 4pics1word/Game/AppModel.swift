@@ -208,15 +208,35 @@ final class AppModel {
     }
 
     /// Daily-reminder toggle: persists optimistically, then applies the notification
-    /// schedule asynchronously; reverts the setting when iOS denies permission.
+    /// schedule asynchronously; reverts the setting when iOS denies permission or
+    /// scheduling fails. If the user toggles again while the permission prompt is
+    /// still up, the stale task reconciles to the latest persisted state instead of
+    /// trusting its own (now outdated) request.
     func updateDailyReminder(_ enabled: Bool) {
         settings.reminderEnabled = enabled
         settings.save(defaults: settingsDefaults)
         Task { @MainActor [weak self] in
-            let active = await DailyReminder.apply(enabled: enabled)
-            guard let self, active != enabled else { return }
-            self.settings.reminderEnabled = active
-            self.settings.save(defaults: self.settingsDefaults)
+            guard let self else { return }
+            var active = await DailyReminder.apply(enabled: enabled)
+            if self.settings.reminderEnabled != enabled {
+                active = await DailyReminder.apply(enabled: self.settings.reminderEnabled)
+            }
+            if active != self.settings.reminderEnabled {
+                self.settings.reminderEnabled = active
+                self.settings.save(defaults: self.settingsDefaults)
+            }
+        }
+    }
+
+    /// Re-applies the persisted reminder state at launch. Also reconciles the toggle
+    /// when notification permission was revoked in iOS Settings while the app was away —
+    /// `apply` returns the effective state, so a denied launch writes the setting back
+    /// to off.
+    func reconcileDailyReminder() async {
+        let active = await DailyReminder.apply(enabled: settings.reminderEnabled)
+        if active != settings.reminderEnabled {
+            settings.reminderEnabled = active
+            settings.save(defaults: settingsDefaults)
         }
     }
 

@@ -28,18 +28,12 @@ enum DailyReminder {
             granted = false
         }
         guard granted else { return false }
-        await schedule(on: center)
-        return true
+        // `add` replaces the pending request with the same identifier, so re-applying
+        // is idempotent — this is also how a launch re-arms the trigger.
+        return await schedule(on: center)
     }
 
-    /// Re-arms the daily trigger when the feature is on — called at launch because
-    /// `add` replaces the pending request with the same identifier (idempotent).
-    static func refreshIfNeeded(enabled: Bool) async {
-        guard enabled else { return }
-        _ = await apply(enabled: true)
-    }
-
-    private static func schedule(on center: UNUserNotificationCenter) async {
+    private static func schedule(on center: UNUserNotificationCenter) async -> Bool {
         let content = UNMutableNotificationContent()
         content.title = "Daily Reward"
         content.body = "Your daily reward is waiting — claim it before midnight and keep your streak alive."
@@ -48,6 +42,11 @@ enum DailyReminder {
             dateMatching: DateComponents(hour: fireHour),
             repeats: true
         )
-        try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+            return true
+        } catch {
+            return false
+        }
     }
 }
