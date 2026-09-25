@@ -7,6 +7,7 @@ enum Route: Hashable {
 
 /// Root navigation shell: splash → Home (NavigationStack) → Game (fullScreenCover) → Win (sheet).
 struct AppRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
     @State private var showSplash = true
     @State private var showCheckinSheet = false
@@ -50,6 +51,11 @@ struct AppRootView: View {
                 showCheckinSheet = true
                 model.markCheckinSheetSeen()
             }
+        }
+        // Rolled quests expire at local midnight even while the app sits in the
+        // background — re-roll whenever the player returns.
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active { model.ensureTodayQuests() }
         }
     }
 

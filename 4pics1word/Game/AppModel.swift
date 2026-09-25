@@ -50,14 +50,7 @@ final class AppModel {
     var hasNextLevel: Bool { progress.currentLevelIndex < totalLevels }
     var canCheckInToday: Bool { CheckIn.canClaim(progress) }
 
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        return f
-    }()
-
-    private var todayKey: String { Self.dayFormatter.string(from: Date()) }
+    private var todayKey: String { DailyQuests.dayKey() }
     var hasSeenCheckinSheetToday: Bool { settings.lastCheckinSheetDay == todayKey }
     func markCheckinSheetSeen() {
         settings.lastCheckinSheetDay = todayKey
@@ -97,11 +90,13 @@ final class AppModel {
         progress.solvedIds.insert(state.puzzle.id)
         progress.lifetimeSolved += 1
         GameCenter.submitScore(progress.lifetimeSolved)
-        recordQuestEvent(.solvePuzzles)
+        // Quest progress stays in memory here — the single store.save below commits it
+        // atomically with the advanced level index (a crash can't re-grant the reward).
+        applyQuestEvent(.solvePuzzles)
         if !state.usedAnyHint {
-            recordQuestEvent(.solveNoHints)
+            applyQuestEvent(.solveNoHints)
         }
-        recordQuestEvent(.earnCoins, amount: reward)
+        applyQuestEvent(.earnCoins, amount: reward)
         // Loop seamlessly: after the final level, wrap back to the first.
         // The total is never surfaced to the user, so completion is invisible.
         progress.currentLevelIndex = (progress.currentLevelIndex + 1) % totalLevels
@@ -147,30 +142,44 @@ final class AppModel {
 
     // MARK: - Daily quests
 
-    /// Rolls today's board if the persisted one is stale or missing. Lazily generates
-    /// the per-user seed on first use — two players therefore see different quest
-    /// sets while one player's board stays identical across relaunches and day-key
-    /// comparisons.
-    func ensureTodayQuests() {
+    /// Rolls today's board when the persisted one is stale or missing, generating the
+    /// per-user seed on first use — two players see different quest sets while one
+    /// player's board stays identical across relaunches. In-memory only: callers
+    /// decide when to persist (a solve saves once, after advancing the level index).
+    @discardableResult
+    private func refreshQuestBoardIfNeeded() -> Bool {
         let day = DailyQuests.dayKey()
-        guard progress.dailyQuests?.day != day else { return }
+        guard progress.dailyQuests?.day != day else { return false }
         if settings.questSeed == 0 {
             settings.questSeed = Int.random(in: Int.min...Int.max)
             settings.save(defaults: settingsDefaults)
         }
         progress.dailyQuests = DailyQuests.roll(seed: UInt64(bitPattern: Int64(settings.questSeed)), day: day)
-        store.save(progress)
+        return true
     }
 
-    /// Records one gameplay event toward today's matching quest(s). Rolls the board
-    /// first so an event landing after midnight feeds the new day, not the stale one.
-    /// `earnCoins` excludes quest payouts — a quest can't fuel itself.
-    func recordQuestEvent(_ kind: QuestKind, amount: Int = 1) {
-        ensureTodayQuests()
-        guard var board = progress.dailyQuests else { return }
-        guard DailyQuests.record(kind, amount: amount, in: &board) else { return }
+    /// Public entry for app launch / sheet open / foreground resume: rolls and saves.
+    func ensureTodayQuests() {
+        if refreshQuestBoardIfNeeded() { store.save(progress) }
+    }
+
+    /// In-memory event application for mid-transaction paths (solve): the caller's own
+    /// save commits quest progress atomically with the rest of the event.
+    @discardableResult
+    private func applyQuestEvent(_ kind: QuestKind, amount: Int = 1) -> Bool {
+        refreshQuestBoardIfNeeded()
+        guard var board = progress.dailyQuests else { return false }
+        guard DailyQuests.record(kind, amount: amount, in: &board) else { return false }
         progress.dailyQuests = board
-        store.save(progress)
+        return true
+    }
+
+    /// Records one gameplay event toward today's matching quest(s), persisting
+    /// immediately — for standalone events (hint use, check-in, ad reward). Rolls the
+    /// board first so an event landing after midnight feeds the new day, not the stale
+    /// one. `earnCoins` excludes quest payouts — a quest can't fuel itself.
+    func recordQuestEvent(_ kind: QuestKind, amount: Int = 1) {
+        if applyQuestEvent(kind, amount: amount) { store.save(progress) }
     }
 
     /// Claims a completed quest's reward. Returns the coins granted, or nil when the
@@ -191,7 +200,12 @@ final class AppModel {
     }
 
     var todayQuests: [DailyQuest] { progress.dailyQuests?.quests ?? [] }
-    var claimableQuestCount: Int { todayQuests.filter { $0.isComplete && !$0.claimed }.count }
+    /// Orange-dot count — only today's unclaimed rewards. A stale board left over from
+    /// before midnight advertises nothing: the dot ignores it until the board re-rolls.
+    var claimableQuestCount: Int {
+        guard progress.dailyQuests?.day == DailyQuests.dayKey() else { return 0 }
+        return todayQuests.filter { $0.isComplete && !$0.claimed }.count
+    }
 
     /// Flip `.celebrating` → `.won` (presents WinView sheet). Idempotent: no-op when already
     /// `.won`/`.home`/`.playing`. Cancels the safety-net Task — explicit completion wins.

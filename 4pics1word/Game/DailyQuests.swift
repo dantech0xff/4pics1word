@@ -104,17 +104,13 @@ enum DailyQuests {
         return changed
     }
 
-    /// Calendar-day key (yyyy-MM-dd, local tz) matching the check-in convention.
+    /// Calendar-day key (yyyy-MM-dd) matching the check-in convention. Derived from
+    /// `Calendar.current` at call time so a timezone change mid-session re-keys the
+    /// day the same way `CheckIn` does — a cached formatter would keep the old tz.
     static func dayKey(for date: Date = Date()) -> String {
-        Self.dayFormatter.string(from: date)
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
-
-    private static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        return f
-    }()
 
     private static func fnv1a(_ string: String) -> UInt64 {
         var hash: UInt64 = 0xcbf29ce484222325
