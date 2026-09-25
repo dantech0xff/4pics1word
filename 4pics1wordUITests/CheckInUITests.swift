@@ -19,7 +19,7 @@ final class CheckInUITests: XCTestCase {
     }
 
     private func waitForSheet(_ app: XCUIApplication) -> XCUIElement {
-        let sheet = app.otherElements[Self.checkInView]
+        let sheet = app.descendants(matching: .any)[Self.checkInView].firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 25), "Check-in sheet did not present")
         return sheet
     }
@@ -39,7 +39,7 @@ final class CheckInUITests: XCTestCase {
 
         // Splash (~1.5s) + 0.4s auto-fire delay, plus generous slack for simulator
         // cold-start / debugger-attach overhead on the first launch of a run.
-        let sheet = app.otherElements[Self.checkInView]
+        let sheet = app.descendants(matching: .any)[Self.checkInView].firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 25), "Check-in sheet did not auto-present on first launch")
     }
 
@@ -76,7 +76,7 @@ final class CheckInUITests: XCTestCase {
         XCTAssertTrue(play.waitForExistence(timeout: 25), "Home did not appear on relaunch")
 
         // Auto-fire (if any) lands by ~1.9s after launch; give it 4s then assert it never appeared.
-        let sheet = app.otherElements[Self.checkInView]
+        let sheet = app.descendants(matching: .any)[Self.checkInView].firstMatch
         XCTAssertFalse(sheet.waitForExistence(timeout: 4), "Sheet should not auto-present after claiming today")
     }
 
@@ -112,16 +112,23 @@ final class CheckInUITests: XCTestCase {
         XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Toolbar button did not reopen the sheet")
     }
 
-    /// The sheet cannot be dismissed before today's reward is claimed. There is no Close
-    /// button; the gate is `.interactiveDismissDisabled(model.canCheckInToday)`.
-    func testSheetNotDismissableBeforeClaim() {
+    /// The sheet can be dismissed before claiming (swipe-down / tap-outside — the
+    /// redesign dropped the forced-claim gate), and the day-1 claim stays available
+    /// when the sheet is reopened from the toolbar.
+    func testSheetDismissableBeforeClaim() {
         let app = launchFresh()
         let sheet = waitForSheet(app)
 
-        // Tapping outside (which WOULD dismiss when allowed) must be blocked pre-claim.
         tapOutsideSheet(in: app)
-        XCTAssertTrue(sheet.waitForExistence(timeout: 2), "Sheet must not dismiss before claiming")
-        XCTAssertTrue(app.buttons["Claim 20 coins"].exists, "Claim button should still be present (pre-claim)")
+        XCTAssertTrue(waitForDisappearance(sheet, timeout: 5), "Sheet should dismiss via tap-outside pre-claim")
+
+        // Pre-claim the button label reads "Daily check-in, reward available" — match the
+        // stable symbol identifier rather than the state-dependent label.
+        let toolbar = app.buttons["calendar.badge.checkmark"]
+        XCTAssertTrue(toolbar.waitForExistence(timeout: 5), "Check-in toolbar button not found after dismiss")
+        toolbar.tap()
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Toolbar button did not reopen the sheet")
+        XCTAssertTrue(app.buttons["Claim 20 coins"].exists, "Claim button should be present on reopen")
     }
 
     // MARK: - Phase 05: progress dots + jackpot cell
@@ -174,7 +181,7 @@ final class CheckInUITests: XCTestCase {
 
         // Identifier-based query; fall back to label match if SwiftUI surfaces the element
         // under a different XCTest type than `otherElement`.
-        let byIdentifier = app.otherElements["CheckInCountdown"]
+        let byIdentifier = app.descendants(matching: .any)["CheckInCountdown"].firstMatch
         if byIdentifier.waitForExistence(timeout: 5) { return }
         let byLabel = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "Next reward")).firstMatch

@@ -6,6 +6,9 @@ import XCTest
 final class SolveFlowUITests: XCTestCase {
     func testSolveLevel1() throws {
         let app = XCUIApplication()
+        // Fresh state (level 1 = MOUSE is deterministic) + suppress the auto
+        // check-in sheet that would otherwise cover the Play button.
+        app.launchArguments += ["-uitest-reset", "-uitest-nocheckin"]
         app.launch()
 
         // Splash auto-dismisses (~1.5s); wait for the Home Play button.
