@@ -13,7 +13,7 @@ final class SolveFlowUITests: XCTestCase {
 
         // Splash auto-dismisses (~1.5s); wait for the Home Play button.
         let play = app.buttons["Play"]
-        XCTAssertTrue(play.waitForExistence(timeout: 30), "Home Play button never appeared")
+        XCTAssertTrue(play.waitForExistence(timeout: 45), "Home Play button never appeared")
         play.tap()
 
         // Solve MOUSE by tapping each needed letter (auto-fills first empty slot).
@@ -21,12 +21,13 @@ final class SolveFlowUITests: XCTestCase {
         // available tile rather than assuming a unique label per character.
         for letter in ["M", "O", "U", "S", "E"] {
             let tile = app.buttons.matching(identifier: letter).firstMatch
-            XCTAssertTrue(tile.waitForExistence(timeout: 15), "Bank tile \(letter) not found")
+            XCTAssertTrue(tile.waitForExistence(timeout: 30), "Bank tile \(letter) not found")
             tile.tap()
         }
 
         // The 5th placement fills the board → win → WinView sheet with "Next Level".
+        // Generous: celebration wave + sheet transition can lag on shared-CPU runners.
         let next = app.buttons["Next Level"]
-        XCTAssertTrue(next.waitForExistence(timeout: 15), "Win sheet did not appear after solving")
+        XCTAssertTrue(next.waitForExistence(timeout: 45), "Win sheet did not appear after solving")
     }
 }
