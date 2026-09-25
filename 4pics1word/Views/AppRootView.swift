@@ -44,6 +44,7 @@ struct AppRootView: View {
                 GameCenter.submitScore(model.progress.lifetimeSolved)
             }
             await model.reconcileDailyReminder()
+            model.ensureTodayQuests()
             if model.canCheckInToday && !model.hasSeenCheckinSheetToday {
                 try? await Task.sleep(for: .seconds(0.4))
                 showCheckinSheet = true

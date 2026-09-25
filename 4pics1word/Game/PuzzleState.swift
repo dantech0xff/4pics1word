@@ -41,6 +41,20 @@ final class PuzzleState {
     /// the celebration wave (mirrors `wrongAttemptToken`).
     private(set) var solvedToken: Int = 0
 
+    /// Whether any paid hint was used on this puzzle — AppModel reads it at solve time
+    /// to feed the solve-without-hints daily quest.
+    private(set) var usedAnyHint = false
+    /// Fires once per successful paid hint. Optional: AppModel hooks it for daily
+    /// quests; the engine stays free of quest knowledge.
+    var onHintUsed: ((HintKind) -> Void)?
+
+    /// Paid-hint identifier for `onHintUsed` — kept engine-local so `PuzzleState`
+    /// never imports quest vocabulary.
+    enum HintKind {
+        case reveal
+        case remove
+    }
+
     /// Fired once when the puzzle is solved. AppModel applies reward + persists + advances.
     var onSolved: (PuzzleState) -> Void = { _ in }
 
@@ -150,6 +164,8 @@ final class PuzzleState {
         mutateTile(pick.id) { $0.slot = targetSlot; $0.locked = true }
         bankOrder.removeAll { $0 == pick.id }
         coins -= HintCost.reveal
+        usedAnyHint = true
+        onHintUsed?(.reveal)
         if isFull { evaluate() }
     }
 
@@ -172,6 +188,8 @@ final class PuzzleState {
         for id in toDiscard { mutateTile(id) { $0.discarded = true } }
         bankOrder.removeAll { toDiscard.contains($0) }
         coins -= HintCost.remove
+        usedAnyHint = true
+        onHintUsed?(.remove)
     }
 
     /// Reshuffle bank display order. Cosmetic; never mutates tile state. (spec §4.6)

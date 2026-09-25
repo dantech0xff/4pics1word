@@ -76,6 +76,12 @@ final class AppModel {
         let state = PuzzleState(puzzle: puzzle, coins: progress.coins) { [weak self] solved in
             self?.handleSolved(solved)
         }
+        state.onHintUsed = { [weak self] kind in
+            switch kind {
+            case .reveal: self?.recordQuestEvent(.useRevealHints)
+            case .remove: self?.recordQuestEvent(.useRemoveHints)
+            }
+        }
         gameState = state
         phase = .playing
     }
@@ -91,6 +97,11 @@ final class AppModel {
         progress.solvedIds.insert(state.puzzle.id)
         progress.lifetimeSolved += 1
         GameCenter.submitScore(progress.lifetimeSolved)
+        recordQuestEvent(.solvePuzzles)
+        if !state.usedAnyHint {
+            recordQuestEvent(.solveNoHints)
+        }
+        recordQuestEvent(.earnCoins, amount: reward)
         // Loop seamlessly: after the final level, wrap back to the first.
         // The total is never surfaced to the user, so completion is invisible.
         progress.currentLevelIndex = (progress.currentLevelIndex + 1) % totalLevels
@@ -129,8 +140,58 @@ final class AppModel {
         progress.lastKnownNow = Date()
         lastCheckInReward = reward
         store.save(progress)
+        recordQuestEvent(.claimCheckin)
+        recordQuestEvent(.earnCoins, amount: reward)
         return reward
     }
+
+    // MARK: - Daily quests
+
+    /// Rolls today's board if the persisted one is stale or missing. Lazily generates
+    /// the per-user seed on first use — two players therefore see different quest
+    /// sets while one player's board stays identical across relaunches and day-key
+    /// comparisons.
+    func ensureTodayQuests() {
+        let day = DailyQuests.dayKey()
+        guard progress.dailyQuests?.day != day else { return }
+        if settings.questSeed == 0 {
+            settings.questSeed = Int.random(in: Int.min...Int.max)
+            settings.save(defaults: settingsDefaults)
+        }
+        progress.dailyQuests = DailyQuests.roll(seed: UInt64(bitPattern: Int64(settings.questSeed)), day: day)
+        store.save(progress)
+    }
+
+    /// Records one gameplay event toward today's matching quest(s). Rolls the board
+    /// first so an event landing after midnight feeds the new day, not the stale one.
+    /// `earnCoins` excludes quest payouts — a quest can't fuel itself.
+    func recordQuestEvent(_ kind: QuestKind, amount: Int = 1) {
+        ensureTodayQuests()
+        guard var board = progress.dailyQuests else { return }
+        guard DailyQuests.record(kind, amount: amount, in: &board) else { return }
+        progress.dailyQuests = board
+        store.save(progress)
+    }
+
+    /// Claims a completed quest's reward. Returns the coins granted, or nil when the
+    /// quest is incomplete/already claimed/unknown.
+    @discardableResult
+    func claimQuest(id: Int) -> Int? {
+        ensureTodayQuests()
+        guard var board = progress.dailyQuests,
+              let idx = board.quests.firstIndex(where: { $0.id == id }),
+              board.quests[idx].isComplete, !board.quests[idx].claimed else { return nil }
+        let reward = board.quests[idx].reward
+        board.quests[idx].claimed = true
+        progress.dailyQuests = board
+        progress.coins += reward
+        gameState?.coins += reward
+        store.save(progress)
+        return reward
+    }
+
+    var todayQuests: [DailyQuest] { progress.dailyQuests?.quests ?? [] }
+    var claimableQuestCount: Int { todayQuests.filter { $0.isComplete && !$0.claimed }.count }
 
     /// Flip `.celebrating` → `.won` (presents WinView sheet). Idempotent: no-op when already
     /// `.won`/`.home`/`.playing`. Cancels the safety-net Task — explicit completion wins.
@@ -177,6 +238,7 @@ final class AppModel {
         progress.coins += amount
         gameState?.coins += amount
         store.save(progress)
+        recordQuestEvent(.earnCoins, amount: amount)
     }
 
     func exitToHome() {

@@ -4,6 +4,7 @@ struct HomeView: View {
     let model: AppModel
     @Binding var showCheckin: Bool
     @State private var rewardAdInFlight = false
+    @State private var showQuests = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -52,6 +53,25 @@ struct HomeView: View {
                     .foregroundStyle(model.canCheckInToday ? Color.accentColor : Color.primary)
             }
             .accessibilityLabel(model.canCheckInToday ? "Daily check-in, reward available" : "Daily check-in")
+            Button { showQuests = true } label: {
+                Image(systemName: "checklist")
+                    .font(.title2)
+                    .padding(8)
+                    .overlay(alignment: .topTrailing) {
+                        if model.claimableQuestCount > 0 {
+                            Circle()
+                                .fill(Color.orange)
+                                .frame(width: 9, height: 9)
+                                .offset(x: -2, y: 4)
+                                .transition(.scale)
+                        }
+                    }
+            }
+            .accessibilityLabel(model.claimableQuestCount > 0 ? "Daily quests, \(model.claimableQuestCount) reward\(model.claimableQuestCount == 1 ? "" : "s") to claim" : "Daily quests")
+            .accessibilityIdentifier("QuestsToolbarButton")
+            .sheet(isPresented: $showQuests) {
+                DailyQuestsView(model: model)
+            }
             Button { GameCenter.showLeaderboard() } label: {
                 Image(systemName: "trophy")
                     .font(.title2)

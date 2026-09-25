@@ -47,6 +47,10 @@ struct Progress: Codable, Equatable {
     var levelsCompletedSinceInterstitial: Int = 0
     var lastInterstitialAt: Date?
     var hasSeenAttPrompt: Bool = false
+    /// Today's quest board — regenerated when the day key no longer matches. Storing
+    /// the board (not just progress) keeps quests stable across relaunches even if
+    /// the template catalog changes.
+    var dailyQuests: DailyQuestsState?
 
     static let startingCoins = 100
 
@@ -54,6 +58,7 @@ struct Progress: Codable, Equatable {
         case currentLevelIndex, coins, solvedIds, lifetimeSolved
         case lastCheckInDate, streakDays, lifetimeCheckIns, lastKnownNow
         case levelsCompletedSinceInterstitial, lastInterstitialAt, hasSeenAttPrompt
+        case dailyQuests
     }
 
     init() {}
@@ -71,5 +76,6 @@ struct Progress: Codable, Equatable {
         levelsCompletedSinceInterstitial = try c.decodeIfPresent(Int.self, forKey: .levelsCompletedSinceInterstitial) ?? 0
         lastInterstitialAt = try c.decodeIfPresent(Date.self, forKey: .lastInterstitialAt)
         hasSeenAttPrompt = try c.decodeIfPresent(Bool.self, forKey: .hasSeenAttPrompt) ?? false
+        dailyQuests = try c.decodeIfPresent(DailyQuestsState.self, forKey: .dailyQuests)
     }
 }
