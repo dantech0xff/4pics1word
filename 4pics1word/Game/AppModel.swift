@@ -207,6 +207,19 @@ final class AppModel {
         settings.save(defaults: settingsDefaults)
     }
 
+    /// Daily-reminder toggle: persists optimistically, then applies the notification
+    /// schedule asynchronously; reverts the setting when iOS denies permission.
+    func updateDailyReminder(_ enabled: Bool) {
+        settings.reminderEnabled = enabled
+        settings.save(defaults: settingsDefaults)
+        Task { @MainActor [weak self] in
+            let active = await DailyReminder.apply(enabled: enabled)
+            guard let self, active != enabled else { return }
+            self.settings.reminderEnabled = active
+            self.settings.save(defaults: self.settingsDefaults)
+        }
+    }
+
     /// Unique photo attributions across all bundled levels (legal: credit all included art).
     var allCredits: [String] {
         let seen = NSMutableOrderedSet()

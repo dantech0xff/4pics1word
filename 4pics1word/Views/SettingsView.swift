@@ -25,6 +25,18 @@ struct SettingsView: View {
                 ))
             }
 
+            Section {
+                Toggle("Daily reward reminder", isOn: Binding(
+                    get: { model.settings.reminderEnabled },
+                    set: { model.updateDailyReminder($0) }
+                ))
+                .accessibilityIdentifier("DailyReminderToggle")
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("An evening nudge so your streak doesn't reset.")
+            }
+
             Section("Progress") {
                 Button(role: .destructive) {
                     showResetConfirm = true
