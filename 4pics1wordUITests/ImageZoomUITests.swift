@@ -6,6 +6,8 @@ import XCTest
 final class ImageZoomUITests: XCTestCase {
     func testTapPictureZoomsThenDismisses() throws {
         let app = XCUIApplication()
+        // Suppress the auto check-in sheet so it can't cover the Home entry button.
+        app.launchArguments += ["-uitest-reset", "-uitest-nocheckin"]
         app.launch()
 
         // Home shows "Play" (fresh install) or "Continue" (saved progress).
