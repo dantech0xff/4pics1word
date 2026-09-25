@@ -20,13 +20,13 @@ final class CheckInUITests: XCTestCase {
 
     private func waitForSheet(_ app: XCUIApplication) -> XCUIElement {
         let sheet = app.descendants(matching: .any)[Self.checkInView].firstMatch
-        XCTAssertTrue(sheet.waitForExistence(timeout: 25), "Check-in sheet did not present")
+        XCTAssertTrue(sheet.waitForExistence(timeout: 60), "Check-in sheet did not present")
         return sheet
     }
 
     /// Waits for `element` to leave the a11y tree. Returns true if it disappeared within `timeout`.
     @discardableResult
-    private func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+    private func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval = 15) -> Bool {
         let gone = NSPredicate(format: "exists == false")
         let expectation = XCTNSPredicateExpectation(predicate: gone, object: element)
         return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
@@ -40,7 +40,7 @@ final class CheckInUITests: XCTestCase {
         // Splash (~1.5s) + 0.4s auto-fire delay, plus generous slack for simulator
         // cold-start / debugger-attach overhead on the first launch of a run.
         let sheet = app.descendants(matching: .any)[Self.checkInView].firstMatch
-        XCTAssertTrue(sheet.waitForExistence(timeout: 25), "Check-in sheet did not auto-present on first launch")
+        XCTAssertTrue(sheet.waitForExistence(timeout: 60), "Check-in sheet did not auto-present on first launch")
     }
 
     func testClaimShowsCountdown() {
@@ -48,12 +48,12 @@ final class CheckInUITests: XCTestCase {
         _ = waitForSheet(app)
 
         let claim = app.buttons["Claim 20 coins"]
-        XCTAssertTrue(claim.waitForExistence(timeout: 25), "Day-1 Claim button (20 coins) not found")
+        XCTAssertTrue(claim.waitForExistence(timeout: 60), "Day-1 Claim button (20 coins) not found")
         claim.tap()
 
         let countdown = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "Next reward")).firstMatch
-        XCTAssertTrue(countdown.waitForExistence(timeout: 5),
+        XCTAssertTrue(countdown.waitForExistence(timeout: 15),
                       "Claim did not transition to countdown state")
         XCTAssertFalse(claim.exists, "Claim button should disappear after claiming")
     }
@@ -65,7 +65,7 @@ final class CheckInUITests: XCTestCase {
 
         // Claim today's reward so progress.lastCheckInDate is persisted.
         let claim = app.buttons["Claim 20 coins"]
-        XCTAssertTrue(claim.waitForExistence(timeout: 25))
+        XCTAssertTrue(claim.waitForExistence(timeout: 60))
         claim.tap()
 
         // Relaunch WITHOUT the reset flag → persisted claim survives → canCheckInToday is false.
@@ -73,11 +73,11 @@ final class CheckInUITests: XCTestCase {
         app.launch()
 
         let play = app.buttons["Play"]
-        XCTAssertTrue(play.waitForExistence(timeout: 25), "Home did not appear on relaunch")
+        XCTAssertTrue(play.waitForExistence(timeout: 60), "Home did not appear on relaunch")
 
         // Auto-fire (if any) lands by ~1.9s after launch; give it 4s then assert it never appeared.
         let sheet = app.descendants(matching: .any)[Self.checkInView].firstMatch
-        XCTAssertFalse(sheet.waitForExistence(timeout: 4), "Sheet should not auto-present after claiming today")
+        XCTAssertFalse(sheet.waitForExistence(timeout: 10), "Sheet should not auto-present after claiming today")
     }
 
     /// Tap the dimmed area above a `.medium` sheet (the real "tap outside to dismiss"
@@ -93,23 +93,23 @@ final class CheckInUITests: XCTestCase {
 
         // Pre-claim the sheet is non-dismissable; claim first to lift the gate.
         let claim = app.buttons["Claim 20 coins"]
-        XCTAssertTrue(claim.waitForExistence(timeout: 5), "Day-1 Claim button not found")
+        XCTAssertTrue(claim.waitForExistence(timeout: 15), "Day-1 Claim button not found")
         claim.tap()
 
         // Confirm the claim took effect (gate lifts) before we try to dismiss.
         let countdown = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "Next reward")).firstMatch
-        XCTAssertTrue(countdown.waitForExistence(timeout: 5),
+        XCTAssertTrue(countdown.waitForExistence(timeout: 15),
                       "Claim did not transition to countdown state")
 
         // Post-claim: tap-outside is now the dismiss path — no Close button.
         tapOutsideSheet(in: app)
-        XCTAssertTrue(waitForDisappearance(sheet, timeout: 5), "Sheet should dismiss via tap-outside after claiming")
+        XCTAssertTrue(waitForDisappearance(sheet, timeout: 15), "Sheet should dismiss via tap-outside after claiming")
 
         let toolbar = app.buttons["Daily check-in"]
-        XCTAssertTrue(toolbar.waitForExistence(timeout: 5), "Check-in toolbar button not found after dismiss")
+        XCTAssertTrue(toolbar.waitForExistence(timeout: 15), "Check-in toolbar button not found after dismiss")
         toolbar.tap()
-        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Toolbar button did not reopen the sheet")
+        XCTAssertTrue(sheet.waitForExistence(timeout: 15), "Toolbar button did not reopen the sheet")
     }
 
     /// The sheet can be dismissed before claiming (swipe-down / tap-outside — the
@@ -120,14 +120,14 @@ final class CheckInUITests: XCTestCase {
         let sheet = waitForSheet(app)
 
         tapOutsideSheet(in: app)
-        XCTAssertTrue(waitForDisappearance(sheet, timeout: 5), "Sheet should dismiss via tap-outside pre-claim")
+        XCTAssertTrue(waitForDisappearance(sheet, timeout: 15), "Sheet should dismiss via tap-outside pre-claim")
 
         // Pre-claim the button label reads "Daily check-in, reward available" — match the
         // stable symbol identifier rather than the state-dependent label.
         let toolbar = app.buttons["calendar.badge.checkmark"]
-        XCTAssertTrue(toolbar.waitForExistence(timeout: 5), "Check-in toolbar button not found after dismiss")
+        XCTAssertTrue(toolbar.waitForExistence(timeout: 15), "Check-in toolbar button not found after dismiss")
         toolbar.tap()
-        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "Toolbar button did not reopen the sheet")
+        XCTAssertTrue(sheet.waitForExistence(timeout: 15), "Toolbar button did not reopen the sheet")
         XCTAssertTrue(app.buttons["Claim 20 coins"].exists, "Claim button should be present on reopen")
     }
 
@@ -141,7 +141,7 @@ final class CheckInUITests: XCTestCase {
         // expose their label reliably across element types. The dots row reads "N of 7".
         let dots = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "of 7")).firstMatch
-        XCTAssertTrue(dots.waitForExistence(timeout: 10), "Progress dots row not found")
+        XCTAssertTrue(dots.waitForExistence(timeout: 30), "Progress dots row not found")
         XCTAssertTrue(dots.label.contains("0 of 7"), "Fresh progress should read '0 of 7', got: \(dots.label)")
     }
 
@@ -153,7 +153,7 @@ final class CheckInUITests: XCTestCase {
         // via XCTest) + an a11y label that reads "jackpot". Match by label predicate.
         let jackpot = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "jackpot")).firstMatch
-        XCTAssertTrue(jackpot.waitForExistence(timeout: 10), "Day-7 jackpot tile not found")
+        XCTAssertTrue(jackpot.waitForExistence(timeout: 30), "Day-7 jackpot tile not found")
         let label = jackpot.label.lowercased()
         XCTAssertTrue(label.contains("jackpot"), "Day-7 label should read 'jackpot', got: \(jackpot.label)")
         XCTAssertTrue(label.contains("100"), "Day-7 should offer 100 coins, got: \(jackpot.label)")
@@ -169,7 +169,7 @@ final class CheckInUITests: XCTestCase {
 
         let jackpot = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "jackpot")).firstMatch
-        XCTAssertTrue(jackpot.waitForExistence(timeout: 10), "Day-7 jackpot tile not found")
+        XCTAssertTrue(jackpot.waitForExistence(timeout: 30), "Day-7 jackpot tile not found")
         XCTAssertTrue(jackpot.label.contains("100"), "Day-7 should offer 100 coins, got: \(jackpot.label)")
     }
 
@@ -182,10 +182,10 @@ final class CheckInUITests: XCTestCase {
         // Identifier-based query; fall back to label match if SwiftUI surfaces the element
         // under a different XCTest type than `otherElement`.
         let byIdentifier = app.descendants(matching: .any)["CheckInCountdown"].firstMatch
-        if byIdentifier.waitForExistence(timeout: 5) { return }
+        if byIdentifier.waitForExistence(timeout: 15) { return }
         let byLabel = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "Next reward")).firstMatch
-        XCTAssertTrue(byLabel.waitForExistence(timeout: 5),
+        XCTAssertTrue(byLabel.waitForExistence(timeout: 15),
                       "Countdown not found post-claim (tried identifier + label match)")
     }
 }

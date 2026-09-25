@@ -7,6 +7,7 @@ enum Route: Hashable {
 
 /// Root navigation shell: splash → Home (NavigationStack) → Game (fullScreenCover) → Win (sheet).
 struct AppRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
     @State private var showSplash = true
     @State private var showCheckinSheet = false
@@ -44,11 +45,17 @@ struct AppRootView: View {
                 GameCenter.submitScore(model.progress.lifetimeSolved)
             }
             await model.reconcileDailyReminder()
+            model.ensureTodayQuests()
             if model.canCheckInToday && !model.hasSeenCheckinSheetToday {
                 try? await Task.sleep(for: .seconds(0.4))
                 showCheckinSheet = true
                 model.markCheckinSheetSeen()
             }
+        }
+        // Rolled quests expire at local midnight even while the app sits in the
+        // background — re-roll whenever the player returns.
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active { model.ensureTodayQuests() }
         }
     }
 

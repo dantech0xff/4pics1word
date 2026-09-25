@@ -10,11 +10,15 @@ struct Settings: Codable, Equatable {
     var appearance: AppearancePreference = .light
     var lastCheckinSheetDay: String?
     var reminderEnabled: Bool = false
+    /// Private per-user seed for daily-quest rolls — generated lazily on the first
+    /// quest roll, then persisted so the user's quest stream stays their own.
+    /// 0 = unset.
+    var questSeed: Int = 0
 
     static let key = "settings.v1"
 
     private enum CodingKeys: String, CodingKey {
-        case hapticsEnabled, appearance, lastCheckinSheetDay, reminderEnabled
+        case hapticsEnabled, appearance, lastCheckinSheetDay, reminderEnabled, questSeed
     }
 
     init() {}
@@ -26,6 +30,7 @@ struct Settings: Codable, Equatable {
         appearance = try c.decodeIfPresent(AppearancePreference.self, forKey: .appearance) ?? .light
         lastCheckinSheetDay = try c.decodeIfPresent(String.self, forKey: .lastCheckinSheetDay)
         reminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .reminderEnabled) ?? false
+        questSeed = try c.decodeIfPresent(Int.self, forKey: .questSeed) ?? 0
     }
 
     static func load(defaults: UserDefaults = .standard) -> Settings {

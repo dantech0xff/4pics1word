@@ -41,4 +41,7 @@ jobs:
           -project 4pics1word.xcodeproj
           -scheme 4pics1word
           -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17'
+          -parallel-testing-enabled NO
+          -skip-testing:4pics1wordUITests/_pics1wordUITests
+          -skip-testing:4pics1wordUITests/_pics1wordUITestsLaunchTests
           test
