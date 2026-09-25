@@ -24,7 +24,6 @@ struct AppRootView: View {
                         CheckInView(model: model)
                             .presentationDetents([.medium])
                             .presentationDragIndicator(.visible)
-                            .interactiveDismissDisabled(model.canCheckInToday)
                     }
             }
         }

@@ -8,6 +8,7 @@ struct CheckInView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.dismiss) private var dismiss
 
     @State private var displayedCoins: Int = 0
     @State private var celebrate = false
@@ -46,16 +47,20 @@ struct CheckInView: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            header
-            dayStrip
-            Spacer(minLength: 8)
-            actionSection
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                progressSection
+                dayGrid
+                actionSection
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 28)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollIndicators(.hidden)
         .background(backgroundView)
         .overlay(confettiOverlay.allowsHitTesting(false))
         .overlay(flyingCoinOverlay.allowsHitTesting(false))
@@ -73,52 +78,88 @@ struct CheckInView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 4) {
-            Text("Daily Reward")
-                .font(.title2.weight(.bold))
-            HStack(spacing: 4) {
-                Image(systemName: "circle.fill").foregroundStyle(.yellow).font(.caption)
-                Text("\(displayedCoins)")
-                    .font(.title3.weight(.semibold)).monospacedDigit()
-                    .contentTransition(.numericText(value: Double(displayedCoins)))
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Daily Reward")
+                    .font(.title3.weight(.bold))
+                Text(model.canCheckInToday
+                     ? "Claim every day to grow your streak"
+                     : "You're all set for today")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            .background(
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: CoinFramePreferenceKey.self,
-                        value: CoinFrames(headerCounter: proxy.frame(in: .named(Self.checkinSpace)))
-                    )
-                }
-            )
-            .accessibilityIdentifier("CheckInHeaderCounter")
+            Spacer(minLength: 8)
+            coinPill
+            closeButton
         }
-        .frame(maxWidth: .infinity)
         .padding(.top, 4)
     }
 
-    private var dayStrip: some View {
-        VStack(spacing: 12) {
-            progressDots
-            VStack(spacing: 8) {
-                HStack(spacing: 8) {
-                    ForEach(0..<3, id: \.self) { i in dayTile(for: i) }
-                }
-                HStack(spacing: 8) {
-                    ForEach(3..<6, id: \.self) { i in dayTile(for: i) }
-                }
-                dayTile(for: 6)
-            }
+    /// Compact balance pill — also the coin-fly animation's landing target.
+    private var coinPill: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "bitcoinsign.circle.fill")
+                .foregroundStyle(.yellow)
+            Text("\(displayedCoins)")
+                .font(.subheadline.weight(.semibold)).monospacedDigit()
+                .contentTransition(.numericText(value: Double(displayedCoins)))
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Color.secondary.opacity(0.12)))
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: CoinFramePreferenceKey.self,
+                    value: CoinFrames(headerCounter: proxy.frame(in: .named(Self.checkinSpace)))
+                )
+            }
+        )
+        .accessibilityIdentifier("CheckInHeaderCounter")
+        .accessibilityLabel("Balance, \(displayedCoins) coins")
+    }
+
+    private var closeButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color.secondary.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close daily reward")
     }
 
     /// 7-dot progress row above the grid: filled = claimed, ring = today, hollow = locked.
-    private var progressDots: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<7, id: \.self) { i in progressDot(for: i) }
+    private var progressSection: some View {
+        HStack {
+            HStack(spacing: 6) {
+                ForEach(0..<7, id: \.self) { i in progressDot(for: i) }
+            }
+            Spacer()
+            Text("\(claimedCount) of 7")
+                .font(.caption.weight(.medium))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Progress, \(claimedCount) of 7 claimed")
         .accessibilityIdentifier("CheckInProgressDots")
+    }
+
+    private var dayGrid: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                ForEach(0..<3, id: \.self) { i in dayTile(for: i) }
+            }
+            HStack(spacing: 8) {
+                ForEach(3..<6, id: \.self) { i in dayTile(for: i) }
+            }
+            dayTile(for: 6)
+        }
     }
 
     @ViewBuilder
@@ -160,7 +201,7 @@ struct CheckInView: View {
             Button {
                 claimTapped()
             } label: {
-                Text("Claim \(reward) coins")
+                Label("Claim \(reward) coins", systemImage: "bitcoinsign.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
@@ -327,20 +368,21 @@ private struct DayTile: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    @ScaledMetric private var cellHeight: CGFloat = 96
-    @ScaledMetric private var corner: CGFloat = 18
+    @ScaledMetric private var cellHeight: CGFloat = 84
+    @ScaledMetric private var jackpotHeight: CGFloat = 64
+    @ScaledMetric private var corner: CGFloat = 14
 
     var body: some View {
         ZStack {
             tileContent
-                .frame(height: cellHeight)
+                .frame(height: isJackpot ? jackpotHeight : cellHeight)
                 .frame(maxWidth: .infinity)
                 .saturation(state == .locked ? 0.4 : 1)
                 .brightness(state == .locked ? 0.05 : 0)
                 .background(tileBackground)
                 .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
                 .overlay(stateOverlay)
-                .overlay(todayPill)
+                .overlay(todayBadge)
                 .overlay(shimmerOverlay)
                 .opacity(stateOpacity)
                 .scaleEffect(scale)
@@ -497,17 +539,19 @@ private struct DayTile: View {
 
     // MARK: - Badges
 
+    /// Floating "TODAY" badge straddling the tile's top edge — centered so it never
+    /// collides with the "DAY n" label or the lock chip below it.
     @ViewBuilder
-    private var todayPill: some View {
+    private var todayBadge: some View {
         if state == .today {
             Text("TODAY")
-                .font(.system(size: 9, weight: .heavy))
+                .font(.system(size: 8, weight: .heavy))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
                 .background(Capsule().fill(Color.accentColor))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                .padding(6)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .offset(y: -7)
         }
     }
 
