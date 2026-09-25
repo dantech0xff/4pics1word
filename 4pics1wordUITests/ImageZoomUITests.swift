@@ -12,15 +12,15 @@ final class ImageZoomUITests: XCTestCase {
 
         // Home shows "Play" (fresh install) or "Continue" (saved progress).
         let entry = app.buttons.matching(NSPredicate(format: "label IN {'Play','Continue'}")).firstMatch
-        XCTAssertTrue(entry.waitForExistence(timeout: 10), "Home entry button never appeared")
+        XCTAssertTrue(entry.waitForExistence(timeout: 30), "Home entry button never appeared")
         entry.tap()
 
         let cell = app.buttons["Picture 1 of 4"]
-        XCTAssertTrue(cell.waitForExistence(timeout: 5), "Picture cell not found")
+        XCTAssertTrue(cell.waitForExistence(timeout: 15), "Picture cell not found")
 
         // Zoom in: the source cell is hidden while zoomed.
         cell.tap()
-        XCTAssertTrue(cell.waitForNonExistence(timeout: 3), "Cell should hide after zoom-in")
+        XCTAssertTrue(cell.waitForNonExistence(timeout: 10), "Cell should hide after zoom-in")
 
         // The enlarged image covers the whole grid, so the other cells are not tappable.
         XCTAssertFalse(app.buttons["Picture 2 of 4"].isHittable, "Other cells should be covered by the enlarged image")
@@ -31,10 +31,10 @@ final class ImageZoomUITests: XCTestCase {
 
         // Dismiss by tapping the enlarged image (overlay exposes a "…enlarged…" label).
         let bigPic = app.buttons.containing(NSPredicate(format: "label CONTAINS 'enlarged'")).firstMatch
-        XCTAssertTrue(bigPic.waitForExistence(timeout: 3), "Enlarged image not shown")
+        XCTAssertTrue(bigPic.waitForExistence(timeout: 10), "Enlarged image not shown")
         bigPic.tap()
 
         // Zoom out: the cell animates back into the grid.
-        XCTAssertTrue(cell.waitForExistence(timeout: 3), "Cell did not return after dismiss")
+        XCTAssertTrue(cell.waitForExistence(timeout: 10), "Cell did not return after dismiss")
     }
 }

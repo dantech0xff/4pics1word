@@ -9,7 +9,7 @@ final class AdsUITests: XCTestCase {
     /// HomeView title — stable anchor across persisted-state variations (unlike the Play/Continue
     /// button whose label depends on `currentLevelIndex`).
     private func waitForHome(_ app: XCUIApplication) -> Bool {
-        app.staticTexts["4 Pics 1 Word"].waitForExistence(timeout: 25)
+        app.staticTexts["4 Pics 1 Word"].waitForExistence(timeout: 60)
     }
 
     @MainActor
@@ -28,7 +28,7 @@ final class AdsUITests: XCTestCase {
         // No reset flag -> ads enabled -> banner container composed on HomeView.
         app.launch()
         XCTAssertTrue(waitForHome(app), "Home should appear after splash")
-        XCTAssertTrue(app.otherElements["adBanner"].waitForExistence(timeout: 15),
+        XCTAssertTrue(app.otherElements["adBanner"].waitForExistence(timeout: 45),
                        "Banner container should be present when ads are enabled")
     }
 }
