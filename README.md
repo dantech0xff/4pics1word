@@ -1,6 +1,6 @@
 # 4 Pics 1 Word
 
-**Find the word that links the pictures.** A native iOS word-puzzle game built in SwiftUI — four photos, one answer, a scrambled letter bank. Solve puzzles to earn coins, spend them on hints, and keep a 7-day daily-reward streak alive.
+**Find the word that links the pictures.** A complete, monetization-ready iOS word-puzzle game built in SwiftUI — not a demo, not a tutorial stub. Fork it, drop in your own puzzles, plug in your AdMob account, and you have a shippable app.
 
 <p align="center">
   <img src="docs/screenshots/home.png" width="220" alt="Home screen">
@@ -12,37 +12,55 @@
   <img src="docs/screenshots/daily-rewards.png" width="220" alt="Daily rewards sheet">
 </p>
 
-Monetized with Google AdMob (banner / interstitial / rewarded) behind an `AdsManaging` protocol. Offline gameplay; ads are the only network surface.
-
-- **App target:** `4pics1word` · **Bundle ID:** `org.1588e22dda3a7db8.-pics1word` (iPhone + iPad)
-- **Language/UI:** Swift + SwiftUI (declarative; only `UIImage` touches UIKit)
-- **Toolchain:** Xcode 26.6 · **Deployment target:** iOS 26.5+
-- **State:** Swift `@Observable` (Observation) — no Combine
-- **Persistence:** `UserDefaults` (JSON-encoded `Progress` / `Settings`)
-- **Ads:** `GoogleMobileAds` 11.x via SPM (app target only); UMP consent; ATT after first solve
+<p align="center">
+  <img src="https://img.shields.io/badge/iOS-26.5%2B-blue" alt="iOS 26.5+">
+  <img src="https://img.shields.io/badge/SwiftUI-native-blue" alt="SwiftUI">
+  <img src="https://img.shields.io/badge/Xcode-26.6-blue" alt="Xcode 26.6">
+  <img src="https://img.shields.io/badge/AdMob-11.x-green" alt="AdMob">
+  <img src="https://img.shields.io/badge/tests-89%20unit-brightgreen" alt="tests">
+</p>
 
 ---
 
-## Architecture pattern
+## Why this codebase
 
-A **single-`@Observable`-model + declarative view tree** architecture. There is no VIPER/MVVM-C scaffolding, no dependency container, no Combine — just Observation-driven views reading mutable models, with one app-wide orchestrator.
+Most word-puzzle repos are half-finished exercises. This one is a **production-shaped game** where the hard, boring, and easy-to-get-wrong parts are already done:
 
-### State ownership
+- **The whole game loop works.** Four pictures, scrambled letter bank, answer slots, wrong-answer shake, solve celebration, seamless level wrap-around. No TODOs in the critical path.
+- **The economy is wired.** Coins in (`25 + 5·tier` per solve, daily check-in streak `[20,25,30,35,40,50,100]` with a Day-7 jackpot), coins out (Reveal 60, Remove 90, Shuffle free). Engagement and retention hooks are built in, not bolted on.
+- **Monetization is integrated, correctly.** AdMob banner, interstitial (every 3rd level-complete, ≥60s cooldown so you don't torch retention), and rewarded video (+50 coins) — behind an `AdsManaging` protocol so you can stub it in tests. UMP consent for EEA/UK and the ATT prompt flow are already implemented. This is the part most tutorials skip and most submissions get rejected for.
+- **Content scales without code.** Puzzles are data (`puzzles.json` + `.webp` images, decoys seeded deterministically by `SplitMix64`). Adding a level means dropping files, not shipping an update.
+- **The codebase is clean modern SwiftUI.** One `@Observable` model, declarative views, `MainActor` by default, file-system synchronized groups, 89 unit tests covering the game engine — easy to learn from, easy to extend.
 
-| Owner | Holds | Role |
-|---|---|---|
-| `AppRootView` | `@State AppModel` | App-wide orchestrator (progress, settings, phase, active puzzle). |
-| `GameView` | `let state: PuzzleState` | One puzzle attempt (bank, slots, solve/reject tokens). |
-| `CheckInView` | `let model: AppModel` | Reads/writes streak via `model.checkIn()`; ephemeral UI local. |
+## Turn it into revenue
 
-- **`AppModel` is `@Observable`** — any view that holds it re-renders on mutation automatically (no `@Published`, no `sink`). Child views receive the model (or a per-puzzle `PuzzleState`) via `let` + SwiftUI value tracking.
-- **`AppPhase`** (`home` / `playing` / `celebrating` / `won`) is the single source of truth for which root layer is on screen.
-- **Solve reward + persistence + level advance live in `AppModel`, not `PuzzleState`** — keeps the puzzle engine free of tier/level/economy knowledge. `PuzzleState` only owns tile mechanics and fires `onSolved`.
+1. **Clone & run** (5 min): `git clone`, open `4pics1word.xcodeproj`, build to a simulator. Done — the game plays.
+2. **Make it yours** (the real work): your app name, icon, theme, puzzle content. Drop four `<puzzleId>_{1..4}.webp` images per level plus a `puzzles.json` entry — no code changes.
+3. **Plug in money**: register an AdMob account, create ad units, swap the sample IDs in `Info.plist` (`GADApplicationIdentifier`) and `4pics1word/Ads/AdsConfiguration.swift`.
+4. **Ship it**: screenshots, App Store listing, submit. The architecture doesn't change — only content and credentials.
+5. **Grow**: more puzzles = more sessions. The streak/jackpot loop brings players back daily; interstitials monetize level transitions; rewarded ads monetize hint-hungry players.
 
-### Navigation shell
+Ideas for differentiation: themed puzzle packs, seasonal content, category modes, leaderboards, or a paid "no ads" tier — the codebase has room for all of it.
 
-Sheet/cover-based flow — no `NavigationStack` for the game itself:
-```
+---
+
+## What's inside
+
+| System | Details |
+|---|---|
+| **Gameplay** | 4 pics → scrambled letter bank → answer slots; wrong-answer glow/shake; per-tile solve wave + haptics; tap-to-zoom images |
+| **Economy** | `Economy`: starting 100 coins, solve `25 + 5·tier`, hints Reveal 60 / Remove 90 / Shuffle 0 |
+| **Retention** | Daily check-in sheet — 7-day streak, Day-7 jackpot, live midnight countdown, coin-fly + confetti, clock-rewind protection |
+| **Monetization** | Home banner; interstitial every 3rd win (60s cooldown); rewarded +50 coins from HomeView and insufficient-coins alert; ATT explainer after first solve; UMP consent |
+| **Content pipeline** | `LevelService` + `PoolFactory` + `SplitMix64` — bundled `puzzles.json`/`strategy.json`, deterministic decoy letters, auto-filtered by bundled images |
+| **UX polish** | Light/Dark toggle, haptics toggle, reset progress, reduce-motion / reduce-transparency / Dynamic Type gates |
+| **Quality** | 89 unit tests (Swift Testing) driving `PuzzleState`/`AppModel`/`CheckIn` in isolation; XCTest UI suite; `-uitest-reset` launch arg |
+
+## Architecture
+
+A **single-`@Observable`-model + declarative view tree** — no VIPER scaffolding, no Combine, no dependency container. `AppModel` owns progress/settings/phase; `PuzzleState` owns one attempt's tile mechanics; views read them directly.
+
+```text
 SplashView (1.5s) → NavigationStack { HomeView }
                                        └─ settings / credits (push)
                      ├─ fullScreenCover → GameView  (phase ∈ playing/celebrating/won)
@@ -50,31 +68,18 @@ SplashView (1.5s) → NavigationStack { HomeView }
                      └─ sheet(.medium) → CheckInView — daily reward; auto-fires once/day
 ```
 
-### Solve lifecycle (cross-component)
-```
+Solve lifecycle:
+```text
 board full → PuzzleState.evaluate() → onSolved(state)
-   → AppModel.handleSolved: reward + persist + advance index + phase = .celebrating
-GameView observes state.solvedToken → per-tile celebration wave + haptics
-   → wave end → AppModel.completeSolve() → phase = .won → WinView sheet
+   → AppModel.handleSolved: reward + persist + advance + phase = .celebrating
+   → celebration wave ends → phase = .won → WinView sheet
 ```
-Wrong path: `evaluate()` sets `isRejecting` + bumps `wrongAttemptToken` → `AnswerSlots` plays red glow/shake; `GameView` clears tiles via `clearWrongAttempt()` after 550ms (immediately under reduce-motion).
 
-### Key subsystems
-- **Daily check-in / streak** (`CheckIn`): rewards `[20,25,30,35,40,50,100]` indexed by `(streakDays-1) % 7`; day-7 jackpot; clock-rewind protection (120s tolerance).
-- **Puzzle / level / pool** (`LevelService` + `PoolFactory` + `SplitMix64`): bundled `puzzles.json`/`strategy.json` + `.webp` images; decoys seeded by `SplitMix64(puzzle.id.stableSeed)` → deterministic pool per puzzle; seamless level wrap-around.
-- **Economy** (`Economy`): `startingCoins = 100`; solve reward `25 + 5*tier`; hint costs reveal 60 / remove 90 / shuffle 0.
-- **Feedback** (`Feedback`): UIKit haptics only (no audio); cached generators.
-
-### Why no Combine / no layering?
-YAGNI + KISS. The app is offline, single-user, single-window. Observation gives granular re-renders without boilerplate; a flat model + value-passed `PuzzleState` is easier to test (89 unit tests drive `PuzzleState`/`AppModel`/`CheckIn` in isolation) than a deep VIPER stack.
-
-> Deeper detail: [`docs/system-architecture.md`](./docs/system-architecture.md) (incl. Mermaid view+state tree), [`docs/codebase-summary.md`](./docs/codebase-summary.md) (file-by-file).
-
----
+> Deeper detail: [`docs/system-architecture.md`](./docs/system-architecture.md) (Mermaid view+state tree), [`docs/codebase-summary.md`](./docs/codebase-summary.md) (file-by-file).
 
 ## Project structure
 
-```
+```text
 4pics1word/
 ├── 4pics1word/
 │   ├── _pics1wordApp.swift        # @main entry; hosts AppRootView; -uitest-reset hook
@@ -84,88 +89,41 @@ YAGNI + KISS. The app is offline, single-user, single-window. Observation gives 
 │   ├── Ads/                       # AdsManager, AdsManaging, AdsConfiguration, ATTRequester, BannerHostView
 │   ├── Data/                      # LevelService, Models, PoolFactory, ProgressStore, SplitMix64
 │   ├── PrivacyInfo.xcprivacy      # Google SDK privacy manifest
-│   └── Info.plist                 # custom keys: GADApplicationIdentifier, SKAdNetworkItems (merged w/ generated)
-├── Info.plist                     # GADApplicationIdentifier + SKAdNetworkItems (INFOPLIST_FILE; merged with generated keys)
-├── 4pics1wordTests/               # Swift Testing (import Testing) — unit
+│   └── Info.plist                 # GADApplicationIdentifier, SKAdNetworkItems
+├── 4pics1wordTests/               # Swift Testing — unit
 ├── 4pics1wordUITests/             # XCTest — UI
-├── docs/                          # architecture, roadmap, standards, deploy, …
+├── docs/                          # architecture, roadmap, standards, deploy, screenshots
 └── 4pics1word.xcodeproj
 ```
 
-**Module-name gotcha:** the Swift module is `_pics1word`, not `4pics1word` (identifiers can't start with a digit — Xcode prefixes source files with `_`). Unit tests import it as `@testable import _pics1word`.
-
----
+**Module-name gotcha:** the Swift module is `_pics1word`, not `4pics1word` (identifiers can't start with a digit). Tests import it as `@testable import _pics1word`. **File-system synchronized groups are on** — any `.swift` file dropped into the three source folders joins the target automatically; never hand-edit `project.pbxproj`.
 
 ## Setup
 
-### Prerequisites
-- **Xcode 26.6+** (needs the iOS 26.5 SDK — a recent toolchain is required).
-- **File-system synchronized groups are ON** — any `.swift` file added to `4pics1word/`, `4pics1wordTests/`, or `4pics1wordUITests/` is auto-included in the target. Do **not** hand-edit `project.pbxproj` to register new files.
-- **SPM:** the project resolves `GoogleMobileAds` (+ transitive `UserMessagingPlatform`). First build downloads the binary framework. Open `4pics1word.xcodeproj` directly (no `.xcworkspace`).
+**Prerequisites:** Xcode 26.6+ (iOS 26.5 SDK). Open `4pics1word.xcodeproj` directly — no `.xcworkspace`. First build downloads `GoogleMobileAds` (+ `UserMessagingPlatform`) via SPM.
 
-### Clone & open
 ```bash
 git clone https://github.com/dantech0xff/4pics1word.git
 cd 4pics1word
-open 4pics1word.xcodeproj   # or: xed .
-```
 
-### Pick a simulator
-```bash
+# pick a simulator
 xcrun simctl list devices available
-```
 
-### Build (simulator)
-```bash
+# build
 xcodebuild -project 4pics1word.xcodeproj -scheme 4pics1word \
   -destination 'platform=iOS Simulator,name=iPhone 16' build
-```
 
-### Run all tests (unit + UI)
-```bash
+# unit + UI tests
 xcodebuild -project 4pics1word.xcodeproj -scheme 4pics1word \
   -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
-> If parallel UI-test cloning flakes on a busy machine, add `-parallel-testing-enabled NO`.
 
-### Run a single unit test (Swift Testing)
-```bash
-xcodebuild -project 4pics1word.xcodeproj -scheme 4pics1word \
-  -destination 'platform=iOS Simulator,name=iPhone 16' \
-  test -only-testing:4pics1wordTests/CheckInTests
-```
-
-### Code signing
-- **Style:** Automatic (`CODE_SIGN_STYLE = Automatic`).
-- **Team:** `CTSG43U4D8`.
-- To run on a physical device, select your team in Xcode → Signing & Capabilities (the bundled team may not match yours).
-
-### Adding puzzle content (no code change)
-Drop four images named `<puzzleId>_1.webp` … `<puzzleId>_4.webp` into the app bundle. `LevelService.bundledImageIds()` auto-filters the level list to fully-imaged puzzles.
-
----
-
-## Testing notes
-- **Unit tests** (`4pics1wordTests/`) use **Swift Testing** (`import Testing`, `struct` + `@Test func`) — do **not** mix XCTest here.
-- **UI tests** (`4pics1wordUITests/`) use `XCTestCase`.
-- The app honors a `-uitest-reset` launch argument that wipes `progress.v1` + `settings.v1` before UI tests run (see `_pics1wordApp.init`).
-- **Concurrency:** default actor isolation is `MainActor` (`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`). New code is `@MainActor`-isolated by default — mark `nonisolated` explicitly where needed.
-
----
-
-## Features
-- 4-pics-1-word gameplay loop with seamless level wrap-around (count hidden).
-- Hint economy: Reveal (lock a correct letter), Remove (discard decoys), Shuffle (free).
-- Daily check-in sheet — 7-day streak, Day-7 jackpot, live midnight countdown, coin-fly + jackpot confetti.
-- AdMob monetization — HomeView banner; interstitial every 3rd level-complete (≥60s cooldown); rewarded video (+50 coins) from HomeView + hint-insufficient alert; ATT prompt after first solve; UMP consent for EEA/UK.
-- Tap-to-zoom image viewer; photo credits screen.
-- Light/Dark appearance toggle; haptics toggle; reset-progress.
-- Accessibility: reduce-motion, reduce-transparency, Dynamic Type (capped `.accessibility2`) gates throughout.
-
----
+- Single test: `test -only-testing:4pics1wordTests/CheckInTests`
+- Signing is Automatic (bundled team `CTSG43U4D8`) — swap to yours for a physical device.
+- Unit tests use **Swift Testing** (`import Testing`); UI tests use `XCTestCase`. Don't mix.
 
 ## Documentation
-Full docs live in [`docs/`](./docs):
+
 - [Project overview & PDR](./docs/project-overview-pdr.md)
 - [System architecture](./docs/system-architecture.md)
 - [Codebase summary](./docs/codebase-summary.md)
@@ -175,6 +133,7 @@ Full docs live in [`docs/`](./docs):
 - [Project roadmap](./docs/project-roadmap.md)
 
 ## Status
-Active development. No CI/CD, no Fastlane, no App Store submission pipeline yet — all builds/tests run locally via `xcodebuild`. See the [roadmap](./docs/project-roadmap.md).
 
-> ⚠️ **Submit-blocked on AdMob account.** The app currently uses Google's sample/test ad-unit IDs in both Debug and Release (no AdMob account registered). It **cannot ship to the App Store** in this state — Apple rejects test ads and AdMob pays $0. When a real account + ad units are registered, swap the IDs in `Info.plist` (`GADApplicationIdentifier`) and `4pics1word/Ads/AdsConfiguration.swift`. No architecture change required.
+Active development — no CI/CD or Fastlane yet; all builds/tests run locally via `xcodebuild`. See the [roadmap](./docs/project-roadmap.md).
+
+> ⚠️ **One thing stands between this repo and revenue: your AdMob account.** The app currently ships Google's sample/test ad-unit IDs — Apple rejects test ads and AdMob pays $0 on them. Register AdMob, create real ad units, and swap the IDs in `Info.plist` and `AdsConfiguration.swift`. That's it — no architecture change required.
